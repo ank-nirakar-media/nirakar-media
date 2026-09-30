@@ -17,12 +17,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ provider
   const client = await one<{ id: number }>("SELECT id FROM clients WHERE slug = $1", [slug]);
   if (!client || (user.role !== "admin" && user.client_id !== client.id)) return NextResponse.redirect(`${base}/portal`);
 
-  const back = `${base}/portal/c/${slug}/connections`;
+  const fromOnboarding = new URL(req.url).searchParams.get("back") === "onboarding";
+  const back = fromOnboarding ? `${base}/portal/c/${slug}/onboarding?step=2&` : `${base}/portal/c/${slug}/connections?`;
   const redirectUri = `${base}/api/connect/${provider}/callback`;
   const state = randomToken(16);
-  (await cookies()).set("nm_oauth", JSON.stringify({ state, slug, provider }), { httpOnly: true, sameSite: "lax", path: "/", maxAge: 600, secure: base.startsWith("https") });
+  (await cookies()).set("nm_oauth", JSON.stringify({ state, slug, provider, back: fromOnboarding ? "onboarding" : "connections" }), { httpOnly: true, sameSite: "lax", path: "/", maxAge: 600, secure: base.startsWith("https") });
 
   if (provider === "youtube" && youtubeConfigured()) return NextResponse.redirect(youtubeAuthUrl(redirectUri, state));
   if (provider === "instagram" && metaConfigured()) return NextResponse.redirect(metaAuthUrl(redirectUri, state));
-  return NextResponse.redirect(`${back}?error=${encodeURIComponent(`${provider} is not set up yet`)}`);
+  return NextResponse.redirect(`${back}error=${encodeURIComponent(`${provider} is not set up yet`)}`);
 }

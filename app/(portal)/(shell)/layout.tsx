@@ -16,6 +16,7 @@ export default async function ShellLayout({ children }: { children: React.ReactN
           <Link href="/portal" className="brand" aria-label="Dashboard home"><Logo /></Link>
           <nav className="portal-nav" aria-label="Portal">
             {own && <Link href={`/portal/c/${own.slug}`}>Dashboard</Link>}
+            {own && <Link href={`/portal/c/${own.slug}/brand`}>Brand Brain</Link>}
             {own && <Link href={`/portal/c/${own.slug}/connections`}>Connected accounts</Link>}
             {user.role === "admin" && <Link href="/admin">Clients</Link>}
             <span className="portal-user">{user.email}</span>
