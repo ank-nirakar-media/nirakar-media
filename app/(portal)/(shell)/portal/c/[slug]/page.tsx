@@ -4,7 +4,7 @@ import { OutcomeDashboard } from "@/components/portal/OutcomeDashboard";
 import { requireClientAccess } from "@/lib/auth";
 import { loadBrand, steps } from "@/lib/brand";
 import { query } from "@/lib/db";
-import { autoApprove } from "@/lib/pipeline";
+import { processDeadlines } from "@/lib/pipeline";
 import { loadDashboard, parseRange } from "@/lib/portal";
 
 export const metadata: Metadata = { title: "Outcome dashboard", robots: { index: false } };
@@ -15,7 +15,7 @@ export default async function ClientDashboard({ params, searchParams }: { params
   const { user, client } = await requireClientAccess(slug);
   const data = await loadDashboard(client, parseRange(range));
   const brand = await loadBrand(client.id, client.languages);
-  await autoApprove();
+  await processDeadlines();
   const waiting = await query<{ id: number; title: string; review: string }>("SELECT id, title, review FROM content_items WHERE client_id = $1 AND review IS NOT NULL ORDER BY review_requested_at", [client.id]);
   const setupStep = Math.min(brand.onboarding_step, steps.length);
   return (

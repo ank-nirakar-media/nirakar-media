@@ -69,9 +69,12 @@ database are in `docs/client-portal.md`.
 - **Content pipeline** (`/admin/content`): a board and calendar of every content item across clients.
   Write the script, add the video link and send each for client approval. Clients approve or request
   changes at `/portal/c/<slug>/content`; anything unanswered for 48 hours is approved automatically.
+- **Email notifications** (`lib/notify.ts`, Admin > Emails): clients get approval requests, a reminder
+  after 24 hours and messages from you; you get their approvals, change requests and messages. Sent
+  through Resend with `RESEND_API_KEY`; setup steps are in `docs/client-portal.md`.
 - **Connected accounts**: clients (or you, as admin) connect YouTube and Instagram with read-only
   OAuth. Tokens are encrypted with `ENCRYPTION_KEY`.
-- **Daily sync**: Vercel Cron calls `/api/cron/sync` at 01:30 UTC (7:00 IST) with `CRON_SECRET`.
+- **Daily sync**: Vercel Cron calls `/api/cron/sync` at 01:30 UTC (7:00 IST) and `/api/cron/deadlines` at 13:30 UTC (19:00 IST) with `CRON_SECRET`. Deadlines (reminders, auto-approvals) also run whenever the portal is opened.
   Each sync stores a cumulative snapshot per video, and the dashboard shows the change over the period.
   Numbers start on the day an account is connected: older lifetime views are not counted as new.
 - **Leads**: tracked links `/l/<code>` redirect to the destination and count one lead per visitor per day.

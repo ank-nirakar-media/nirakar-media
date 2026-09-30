@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { one } from "@/lib/db";
 import { encryptionKeyStatus } from "@/lib/crypto";
 import { razorpayKeyStatus } from "@/lib/razorpay";
+import { emailFrom } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,8 @@ export async function GET() {
     razorpayWebhookSecret: set("RAZORPAY_WEBHOOK_SECRET"),
     youtube: process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? "set" : "not yet",
     instagram: process.env.META_APP_ID && process.env.META_APP_SECRET ? "set" : "not yet",
+    email: process.env.RESEND_API_KEY ? "set" : "missing",
+    emailFrom: emailFrom(),
     contactWebhook: set("CONTACT_WEBHOOK_URL"),
     contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL || "default (hello@nirakarmedia.com)",
   });
