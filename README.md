@@ -95,7 +95,7 @@ Slack incoming webhook, Google Apps Script...). Without it, leads are only writt
    (`npm run seed` also works from a laptop, and adds a demo client.)
 5. Project Settings > Domains > add `nirakarmedia.com` and `www.nirakarmedia.com`,
    then set the DNS records Vercel shows at your domain registrar.
-6. Set `NEXT_PUBLIC_SITE_URL=https://nirakarmedia.com` and redeploy.
+6. Set `SITE_URL=https://www.nirakarmedia.com` and redeploy.
 
 ## Architecture
 

@@ -1,3 +1,4 @@
+import { configuredSiteUrl } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
@@ -16,7 +17,7 @@ export default async function AdminClient({ params, searchParams }: { params: Pr
   const sp = await searchParams;
   const { client } = await requireClientAccess(slug);
   const h = await headers();
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || `${h.get("x-forwarded-proto") || "http"}://${h.get("host")}`;
+  const origin = configuredSiteUrl() || `${h.get("x-forwarded-proto") || "http"}://${h.get("host")}`;
 
   const users = await query<{ email: string; name: string; password_hash: string | null }>("SELECT email, name, password_hash FROM users WHERE client_id = $1 ORDER BY email", [client.id]);
   const conns = await query<{ platform: string; account_name: string; status: string; last_error: string | null }>(

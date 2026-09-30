@@ -1,9 +1,10 @@
+import { configuredSiteUrl } from "@/lib/site-url";
 import type { Metadata } from "next";
 import { site } from "@/lib/content";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://nirakarmedia.com"),
+  metadataBase: new URL(configuredSiteUrl() || "https://nirakarmedia.com"),
   title: { default: `${site.name} | Content Growth as a Service`, template: `%s | ${site.name}` },
   description: site.description,
   icons: { icon: "/icon.svg" },

@@ -1,3 +1,4 @@
+import { configuredSiteUrl } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
@@ -18,7 +19,7 @@ export default async function PayPage({ searchParams }: { searchParams: Promise<
 
   const extra = Math.min(3, Math.max(0, Number(lang) || 0));
   const h = await headers();
-  const site = (process.env.NEXT_PUBLIC_SITE_URL || `${h.get("x-forwarded-proto") || "https"}://${h.get("host")}`).replace(/\/$/, "");
+  const site = (configuredSiteUrl() || `${h.get("x-forwarded-proto") || "https"}://${h.get("host")}`).replace(/\/$/, "");
   return (
     <section className="wrap page-hero" style={{ paddingBottom: 96 }}>
       <p className="eyebrow">Secure checkout</p>

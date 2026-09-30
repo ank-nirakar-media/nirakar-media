@@ -1,3 +1,4 @@
+import { configuredSiteUrl } from "@/lib/site-url";
 import { NextResponse } from "next/server";
 import { one } from "@/lib/db";
 import { encryptionKeyStatus } from "@/lib/crypto";
@@ -27,7 +28,7 @@ export async function GET() {
       env: process.env.VERCEL_ENV || "unknown",
       commit: (process.env.VERCEL_GIT_COMMIT_SHA || "unknown").slice(0, 7),
     },
-    siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "missing",
+    siteUrl: configuredSiteUrl() || "missing",
     database,
     adminCreated,
     encryptionKey: encryptionKeyStatus(),
