@@ -23,13 +23,23 @@ export function verifyPassword(password: string, stored: string | null | undefin
   return crypto.timingSafeEqual(expected, actual);
 }
 
-// OAuth tokens are stored encrypted with ENCRYPTION_KEY (32 bytes, base64).
+// OAuth tokens are stored encrypted with ENCRYPTION_KEY: 32 bytes as base64
+// (openssl rand -base64 32), or any other string of 32+ characters, which is
+// hashed to a 32-byte key.
+export function encryptionKeyStatus(): "ok" | "missing" | "too short" {
+  const raw = process.env.ENCRYPTION_KEY?.trim();
+  if (!raw) return "missing";
+  if (Buffer.from(raw, "base64").length === 32 && /^[A-Za-z0-9+/]{43}=?$/.test(raw)) return "ok";
+  return raw.length >= 32 ? "ok" : "too short";
+}
+
 function key() {
-  const raw = process.env.ENCRYPTION_KEY;
-  if (!raw) throw new Error("ENCRYPTION_KEY is not set");
-  const k = Buffer.from(raw, "base64");
-  if (k.length !== 32) throw new Error("ENCRYPTION_KEY must be 32 bytes, base64 encoded");
-  return k;
+  const raw = process.env.ENCRYPTION_KEY?.trim();
+  const status = encryptionKeyStatus();
+  if (status !== "ok") throw new Error(`ENCRYPTION_KEY is ${status}`);
+  const b64 = Buffer.from(raw!, "base64");
+  if (b64.length === 32 && /^[A-Za-z0-9+/]{43}=?$/.test(raw!)) return b64;
+  return crypto.createHash("sha256").update(raw!).digest();
 }
 
 export function encrypt(plain: string) {

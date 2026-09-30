@@ -8,6 +8,18 @@ export function razorpayConfigured(): boolean {
   return Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
 }
 
+// Checks the keys against Razorpay without changing anything. Never returns the keys.
+export async function razorpayKeyStatus(): Promise<{ status: string; mode?: string }> {
+  if (!razorpayConfigured()) return { status: "missing" };
+  const mode = process.env.RAZORPAY_KEY_ID!.startsWith("rzp_live_") ? "live" : process.env.RAZORPAY_KEY_ID!.startsWith("rzp_test_") ? "test" : "unknown";
+  try {
+    await call("GET", "/plans?count=1");
+    return { status: "ok", mode };
+  } catch (e) {
+    return { status: `rejected (${(e as Error).message.slice(0, 80)})`, mode };
+  }
+}
+
 async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
   const auth = Buffer.from(`${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`).toString("base64");
   const res = await fetch(`${API}${path}`, {
