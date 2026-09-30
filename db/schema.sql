@@ -126,3 +126,43 @@ CREATE TABLE IF NOT EXISTS brand_profiles (
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_by       TEXT NOT NULL DEFAULT ''
 );
+
+-- Content pipeline (lib/pipeline.ts): one row per piece of content, from idea to published.
+-- review is what the client is being asked to approve right now ('script' or 'video'), or NULL.
+CREATE TABLE IF NOT EXISTS content_items (
+  id                   SERIAL PRIMARY KEY,
+  client_id            INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  title                TEXT NOT NULL,
+  format               TEXT NOT NULL DEFAULT 'short',
+  platform             TEXT NOT NULL DEFAULT '',
+  language             TEXT NOT NULL DEFAULT '',
+  stage                TEXT NOT NULL DEFAULT 'idea',
+  brief                TEXT NOT NULL DEFAULT '',
+  script               TEXT NOT NULL DEFAULT '',
+  video_url            TEXT NOT NULL DEFAULT '',
+  published_url        TEXT NOT NULL DEFAULT '',
+  internal_notes       TEXT NOT NULL DEFAULT '',
+  due_date             DATE,
+  publish_on           DATE,
+  review               TEXT,
+  review_requested_at  TIMESTAMPTZ,
+  changes_requested    TEXT NOT NULL DEFAULT '',
+  script_approved_at   TIMESTAMPTZ,
+  video_approved_at    TIMESTAMPTZ,
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- History of each item. Clients see everything except internal entries.
+CREATE TABLE IF NOT EXISTS content_events (
+  id          SERIAL PRIMARY KEY,
+  item_id     INTEGER NOT NULL REFERENCES content_items(id) ON DELETE CASCADE,
+  actor       TEXT NOT NULL,
+  kind        TEXT NOT NULL,
+  body        TEXT NOT NULL DEFAULT '',
+  internal    BOOLEAN NOT NULL DEFAULT false,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS content_items_client ON content_items (client_id, stage);
+CREATE INDEX IF NOT EXISTS content_events_item ON content_events (item_id, created_at);

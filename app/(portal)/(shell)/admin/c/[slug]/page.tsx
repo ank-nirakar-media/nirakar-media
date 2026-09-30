@@ -40,6 +40,7 @@ export default async function AdminClient({ params, searchParams }: { params: Pr
         <div><p className="eyebrow">Admin · <Link href="/admin">Clients</Link></p><h1 className="portal-title">{client.name}</h1></div>
         <div className="btn-row">
           <Link href={`/portal/c/${slug}`} className="btn btn-primary btn-sm">View dashboard</Link>
+          <Link href={`/admin/content?client=${slug}`} className="btn btn-ghost btn-sm">Content pipeline</Link>
           <form action={syncNow}><input type="hidden" name="slug" value={slug} /><button className="btn btn-ghost btn-sm" type="submit">Sync now</button></form>
         </div>
       </div>

@@ -41,8 +41,8 @@ Status: **Built**, **Partial** (works but narrower than the diagram), **Later** 
 | API gateway / backend API | Partial | Next.js route handlers and server actions |
 | Onboarding service | Built | Razorpay checkout, then a 6-step setup at `/portal/c/<slug>/onboarding`: business, channels (YouTube and Instagram connect), audience and voice, brand assets, goals, plan review. Brand files are shared as links; file upload is later |
 | Brand Brain service | Built | `lib/brand.ts` and `/portal/c/<slug>/brand`: business, audience, offerings, tone, competitors, pillars, CTAs, languages, compliance, goals, assets. Editable by the client and admin |
-| Content pipeline service | Later | Planned module `lib/pipeline` |
-| Approval workflow service | Later | |
+| Content pipeline service | Built | `lib/pipeline.ts`, `/admin/content` (board and calendar), `content_items`. Stages: idea, script, production, QA, client review, scheduled, published |
+| Approval workflow service | Built | Clients approve the script and the final video or request changes at `/portal/c/<slug>/content`. Anything unanswered for 48 hours is approved automatically. No email or WhatsApp alerts yet |
 | Publishing scheduler | Later | |
 | Analytics service | Built | `lib/portal.ts`, `lib/sync.ts`, `lib/connectors` |
 | Billing service | Partial | `lib/razorpay.ts`, webhooks. No billing page inside the portal yet |
@@ -63,7 +63,7 @@ becomes a function in `lib/ai/*` that the pipeline calls, with an LLM provider b
 ## 6. Human review / operations
 
 **Partial.** The admin console is the team's workspace today: publishing opportunities, tagging videos and
-managing links. Review queues for editors and QA come with the approval workflow.
+managing links, plus the content pipeline board. Separate editor and QA logins come with team roles.
 
 ## 7. Data layer
 
@@ -71,7 +71,7 @@ managing links. Review queues for editors and QA come with the approval workflow
 | --- | --- | --- |
 | User DB | Built | `users`, `sessions`, `clients` |
 | Brand Brain DB | Built | `brand_profiles` (answers as JSON, onboarding progress) |
-| Content metadata DB | Partial | `videos` (synced from platforms). Scripts and versions are later |
+| Content metadata DB | Partial | `content_items` (brief, script, video link, dates) and `content_events` (history), plus `videos` synced from platforms. Script versions are later |
 | Asset storage | Later | Vercel Blob or S3 |
 | Analytics warehouse | Partial | `video_snapshots`, `channel_days`, `leads` in Postgres. That's enough at this scale |
 | Audit logs | Later | |
@@ -105,8 +105,8 @@ data from a CRM or store integration. Until then the dashboard shows leads, not 
 ## Suggested build order
 
 1. ~~Onboarding and the **Brand Brain** profile.~~ Built. Asset file upload (instead of links) is still to do.
-2. **Content pipeline** with statuses (idea, script, production, QA, client approval, scheduled, published),
-   the calendar and queue views, and **client approvals**.
+2. ~~**Content pipeline**, calendar and **client approvals**.~~ Built. Videos are shared as links; uploads
+   and automatic publishing come later.
 3. Notifications (email and WhatsApp) for approvals and reports.
 4. **AI layer** functions plugged into pipeline steps (research, scripting, summaries, recommendations).
 5. Publishing scheduler with platform upload APIs, then LinkedIn and blog outputs.
