@@ -62,7 +62,7 @@ DATABASE_URL="postgres://..." ADMIN_EMAIL=you@nirakarmedia.com ADMIN_PASSWORD="a
    `https://nirakarmedia.com`, privacy policy `https://nirakarmedia.com/legal/privacy`.
    Add the scopes `youtube.readonly` and `yt-analytics.readonly`.
 4. Credentials > Create OAuth client ID > Web application. Authorised redirect URI:
-   `https://nirakarmedia.com/api/connect/youtube/callback`
+   `https://www.nirakarmedia.com/api/connect/youtube/callback`
 5. Put the client ID and secret in `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 6. While the app is in "Testing", add each client's Google account as a test user (up to 100).
    To remove that limit and the "unverified app" warning, submit for verification. The YouTube
@@ -73,7 +73,7 @@ DATABASE_URL="postgres://..." ADMIN_EMAIL=you@nirakarmedia.com ADMIN_PASSWORD="a
 
 1. developers.facebook.com > My Apps > Create app > type **Business**.
 2. Add **Facebook Login for Business**. Valid OAuth redirect URI:
-   `https://nirakarmedia.com/api/connect/instagram/callback`
+   `https://www.nirakarmedia.com/api/connect/instagram/callback`
 3. Permissions used: `instagram_basic`, `instagram_manage_insights`, `pages_show_list`,
    `pages_read_engagement`, `business_management`.
 4. App settings > Basic: privacy policy URL, a data deletion instructions URL (the privacy page
