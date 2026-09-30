@@ -20,6 +20,13 @@ export async function GET() {
   }
   const cron = process.env.CRON_SECRET ?? "";
   return NextResponse.json({
+    // Which Vercel project and deployment answered (public info, helps spot a domain on the wrong project).
+    deployment: {
+      project: process.env.VERCEL_PROJECT_PRODUCTION_URL || "unknown",
+      url: process.env.VERCEL_URL || "unknown",
+      env: process.env.VERCEL_ENV || "unknown",
+      commit: (process.env.VERCEL_GIT_COMMIT_SHA || "unknown").slice(0, 7),
+    },
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "missing",
     database,
     adminCreated,
