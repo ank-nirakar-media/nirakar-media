@@ -9,6 +9,7 @@ client accounts you need the accounts below. Everything else is in the code.
 | --- | --- |
 | Email and password login, invite links (7 days, single use), admin and client roles | `/login`, `/set-password`, `lib/auth.ts` |
 | Onboarding (6 steps) and Brand Brain profile | `/portal/c/<slug>/onboarding`, `/portal/c/<slug>/brand`, `lib/brand.ts` |
+| Content pipeline, calendar and client approvals (script and final video, auto-approve after 48 hours) | `/admin/content`, `/portal/c/<slug>/content`, `lib/pipeline.ts` |
 | Per-client outcome dashboard, 7/30/90 days vs previous period, gated by plan | `/portal/c/<slug>`, `lib/portal.ts` |
 | Admin area: clients, plans, languages, invites, opportunities, tracked links, video tags | `/admin`, `/admin/c/<slug>` |
 | YouTube connector: videos, views, likes, comments, subscribers, views from YouTube search | `lib/connectors/youtube.ts` |
@@ -94,4 +95,5 @@ DATABASE_URL="postgres://..." ADMIN_EMAIL=you@nirakarmedia.com ADMIN_PASSWORD="a
 3. The client sets a password and goes through onboarding, which includes connecting YouTube and Instagram.
    Read their answers in Brand Brain before planning content.
 4. Numbers appear after the first sync and update every morning at 7:00 IST.
-5. Tag videos with topics, add tracked links to captions, and publish opportunities as you find them.
+5. Plan content in Admin > Content: add items, write scripts, add video links and send each for approval.
+6. Tag videos with topics, add tracked links to captions, and publish opportunities as you find them.

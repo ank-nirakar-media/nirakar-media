@@ -66,6 +66,9 @@ database are in `docs/client-portal.md`.
   They can skip any step and finish later from the dashboard banner.
 - **Brand Brain** (`/portal/c/<slug>/brand`): the client's answers in one editable profile, with a
   completeness meter. Admins see onboarding status on the client page.
+- **Content pipeline** (`/admin/content`): a board and calendar of every content item across clients.
+  Write the script, add the video link and send each for client approval. Clients approve or request
+  changes at `/portal/c/<slug>/content`; anything unanswered for 48 hours is approved automatically.
 - **Connected accounts**: clients (or you, as admin) connect YouTube and Instagram with read-only
   OAuth. Tokens are encrypted with `ENCRYPTION_KEY`.
 - **Daily sync**: Vercel Cron calls `/api/cron/sync` at 01:30 UTC (7:00 IST) with `CRON_SECRET`.
