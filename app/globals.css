@@ -526,6 +526,53 @@ code { font-family: var(--font-mono); font-size: .84em; overflow-wrap: anywhere;
 .check { display: flex; gap: 8px; align-items: center; font-size: .92rem; }
 .tag-form { display: flex; gap: 8px; flex-wrap: wrap; }
 .tag-form input { font: inherit; font-size: .88rem; color: var(--text); background: var(--ink-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; width: 150px; }
+/* Onboarding and Brand Brain */
+.onboard-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; counter-reset: none; }
+.onboard-steps a { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); color: var(--muted); font-size: .84rem; font-weight: 600; line-height: 1.25; height: 100%; }
+.onboard-steps a span { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line); font-family: var(--font-mono); font-size: .74rem; }
+.onboard-steps li.done a { color: var(--text); }
+.onboard-steps li.done a span { background: rgba(94,234,212,.12); border-color: rgba(94,234,212,.5); color: var(--good); }
+.onboard-steps li.on a { color: #fff; background: var(--panel-2); border-color: rgba(196,181,253,.5); }
+.onboard-steps li.on a span { background: var(--violet); border-color: var(--violet); color: #fff; }
+@media (max-width: 900px) {
+  .onboard-steps { grid-template-columns: repeat(6, auto); overflow-x: auto; padding-bottom: 4px; }
+  .onboard-steps a { white-space: nowrap; }
+  .onboard-steps li:not(.on) a { font-size: 0; gap: 0; padding: 8px; }
+  .onboard-steps li:not(.on) a span { font-size: .74rem; }
+}
+.chips-field { border: 0; padding: 0; margin: 0; min-width: 0; }
+.chips-field legend { font-size: .9rem; font-weight: 600; padding: 0; margin-bottom: 6px; }
+.chip-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.chip-option { position: relative; cursor: pointer; }
+.chip-option input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.chip-option span { display: inline-block; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--ink-2); font-size: .88rem; color: var(--muted); transition: border-color .15s, background .15s, color .15s; }
+.chip-option:hover span { border-color: rgba(196,181,253,.5); color: var(--text); }
+.chip-option input:checked + span { background: rgba(139,92,246,.22); border-color: var(--violet); color: #fff; }
+.chip-option input:checked + span::before { content: "\2713  "; }
+.chip-option input:focus-visible + span { box-shadow: 0 0 0 3px rgba(139,92,246,.35); }
+.brand-answer { display: grid; gap: 4px; padding: 10px 0; border-top: 1px solid var(--line); min-width: 0; }
+.brand-q { font-size: .8rem; color: var(--muted); font-weight: 500; }
+.chip-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.brand-link { overflow-wrap: anywhere; }
+.brand-text { white-space: pre-line; overflow-wrap: anywhere; }
+.review-plan { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 16px 18px; border-radius: 14px; border: 1px solid rgba(196,181,253,.4); background: rgba(139,92,246,.08); }
+.review-plan > div { display: grid; gap: 2px; min-width: 0; }
+.review-plan-name { font-size: 1.1rem; }
+.review-block { display: grid; }
+.review-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+.review-head h3 { font-size: 1rem; }
+.onboard-nav { align-items: center; padding-top: 8px; border-top: 1px solid var(--line); }
+.btn-link { background: none; border-color: transparent; color: var(--muted); padding-inline: 8px; }
+.btn-link:hover { color: #fff; }
+.notice-inline { margin-bottom: 0; }
+.setup-banner { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; margin-bottom: 0; }
+.setup-banner > div { display: grid; gap: 2px; min-width: 0; }
+.brand-meter { display: grid; gap: 10px; }
+.brand-meter-head { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: baseline; }
+.meter { height: 8px; border-radius: 999px; background: var(--ink-2); border: 1px solid var(--line); overflow: hidden; }
+.meter span { display: block; height: 100%; background: linear-gradient(90deg, var(--violet), var(--violet-soft)); }
+.brand-section { scroll-margin-top: 96px; }
+
 @media print {
   :root { --ink: #fff; --ink-2: #fff; --panel: #fff; --panel-2: #f3f0ff; --text: #111; --muted: #555; --line: #ddd; }
   body { background: #fff; background-image: none; }

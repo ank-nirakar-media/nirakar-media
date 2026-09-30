@@ -61,6 +61,11 @@ database are in `docs/client-portal.md`.
 - **Client** (`/portal/c/<slug>`): Content published, views, engagement, subscriber growth, search views,
   leads, best topics and conversion opportunities for 7, 30 or 90 days, compared with the previous period.
   What they see follows their plan (`planFeatures` in `lib/portal.ts`).
+- **Onboarding** (`/portal/c/<slug>/onboarding`): a new client lands here after their first login and
+  answers six short steps (business, channels, audience and voice, brand assets, goals, plan review).
+  They can skip any step and finish later from the dashboard banner.
+- **Brand Brain** (`/portal/c/<slug>/brand`): the client's answers in one editable profile, with a
+  completeness meter. Admins see onboarding status on the client page.
 - **Connected accounts**: clients (or you, as admin) connect YouTube and Instagram with read-only
   OAuth. Tokens are encrypted with `ENCRYPTION_KEY`.
 - **Daily sync**: Vercel Cron calls `/api/cron/sync` at 01:30 UTC (7:00 IST) with `CRON_SECRET`.

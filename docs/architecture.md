@@ -39,8 +39,8 @@ Status: **Built**, **Partial** (works but narrower than the diagram), **Later** 
 | Box | Status | Where |
 | --- | --- | --- |
 | API gateway / backend API | Partial | Next.js route handlers and server actions |
-| Onboarding service | Partial | Razorpay checkout and channel connect. Business type, brand assets and goals are later |
-| Brand Brain service | Later | Planned module `lib/brand-brain` |
+| Onboarding service | Built | Razorpay checkout, then a 6-step setup at `/portal/c/<slug>/onboarding`: business, channels (YouTube and Instagram connect), audience and voice, brand assets, goals, plan review. Brand files are shared as links; file upload is later |
+| Brand Brain service | Built | `lib/brand.ts` and `/portal/c/<slug>/brand`: business, audience, offerings, tone, competitors, pillars, CTAs, languages, compliance, goals, assets. Editable by the client and admin |
 | Content pipeline service | Later | Planned module `lib/pipeline` |
 | Approval workflow service | Later | |
 | Publishing scheduler | Later | |
@@ -70,7 +70,7 @@ managing links. Review queues for editors and QA come with the approval workflow
 | Box | Status | Where |
 | --- | --- | --- |
 | User DB | Built | `users`, `sessions`, `clients` |
-| Brand Brain DB | Later | |
+| Brand Brain DB | Built | `brand_profiles` (answers as JSON, onboarding progress) |
 | Content metadata DB | Partial | `videos` (synced from platforms). Scripts and versions are later |
 | Asset storage | Later | Vercel Blob or S3 |
 | Analytics warehouse | Partial | `video_snapshots`, `channel_days`, `leads` in Postgres. That's enough at this scale |
@@ -104,7 +104,7 @@ data from a CRM or store integration. Until then the dashboard shows leads, not 
 
 ## Suggested build order
 
-1. Onboarding (business type, goals, brand assets upload) and the **Brand Brain** profile.
+1. ~~Onboarding and the **Brand Brain** profile.~~ Built. Asset file upload (instead of links) is still to do.
 2. **Content pipeline** with statuses (idea, script, production, QA, client approval, scheduled, published),
    the calendar and queue views, and **client approvals**.
 3. Notifications (email and WhatsApp) for approvals and reports.

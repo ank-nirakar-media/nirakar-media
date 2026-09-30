@@ -115,3 +115,14 @@ CREATE TABLE IF NOT EXISTS opportunities (
 
 CREATE INDEX IF NOT EXISTS videos_client ON videos (client_id, published_at);
 CREATE INDEX IF NOT EXISTS leads_client ON leads (client_id, day);
+
+-- Brand Brain (lib/brand.ts): one profile per client, answers stored as JSON so
+-- questions can change without migrations. Filled by onboarding and editable later.
+CREATE TABLE IF NOT EXISTS brand_profiles (
+  client_id        INTEGER PRIMARY KEY REFERENCES clients(id) ON DELETE CASCADE,
+  data             JSONB NOT NULL DEFAULT '{}'::jsonb,
+  onboarding_step  INTEGER NOT NULL DEFAULT 1,
+  onboarded_at     TIMESTAMPTZ,
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_by       TEXT NOT NULL DEFAULT ''
+);

@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { requireAdmin, requireClientAccess } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { plans } from "@/lib/plans";
+import { completeness, loadBrand, steps } from "@/lib/brand";
 import { addOpportunity, createLink, inviteUser, setOpportunity, syncNow, tagVideo, updateClient } from "../../../../actions";
 
 export const metadata: Metadata = { title: "Manage client", robots: { index: false } };
@@ -30,6 +31,9 @@ export default async function AdminClient({ params, searchParams }: { params: Pr
   const videos = await query<{ id: number; platform: string; title: string; topic: string | null; language: string | null; published_at: string }>(
     "SELECT id, platform, title, topic, language, published_at::text FROM videos WHERE client_id = $1 ORDER BY published_at DESC LIMIT 25", [client.id]);
 
+  const brand = await loadBrand(client.id, client.languages);
+  const brandScore = completeness(brand.data);
+
   return (
     <section className="wrap section-tight stack" style={{ gap: 24 }}>
       <div className="portal-head">
@@ -40,6 +44,19 @@ export default async function AdminClient({ params, searchParams }: { params: Pr
         </div>
       </div>
       {sp.error && <p className="notice" role="alert">Something was missing. Check the form and try again.</p>}
+
+      <div className="card setup-banner">
+        <div>
+          <h3>Onboarding and Brand Brain</h3>
+          <span className="muted">
+            {brand.onboarded_at
+              ? `Onboarding finished on ${new Date(brand.onboarded_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}.`
+              : `Onboarding not finished (at step ${Math.min(brand.onboarding_step, steps.length)} of ${steps.length}).`}{" "}
+            Brand Brain: {brandScore.done} of {brandScore.total} sections filled{brand.updated_by ? `, last edited by ${brand.updated_by}` : ""}.
+          </span>
+        </div>
+        <Link href={`/portal/c/${slug}/brand`} className="btn btn-ghost btn-sm">Open Brand Brain</Link>
+      </div>
 
       <div className="grid-2">
         <form action={updateClient} className="card form">
