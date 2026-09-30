@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireAdmin, requireClientAccess } from "@/lib/auth";
 import { one, query } from "@/lib/db";
+import { notifyClientMessage, notifyTeamOfClient } from "@/lib/notify";
 import { addEvent, approve, formats, getItem, isStage, platforms, requestChanges, sendForReview, stageOf, type Review } from "@/lib/pipeline";
 
 const str = (f: FormData, k: string, max = 500) => String(f.get(k) ?? "").trim().slice(0, max);
@@ -81,7 +82,9 @@ export async function addItemMessage(form: FormData) {
   const item = await getItem(Number(form.get("id")));
   const body = str(form, "body", 2000);
   if (!item) redirect("/admin/content");
-  if (body) await addEvent(item.id, TEAM, "message", body, form.get("internal") === "on");
+  const internal = form.get("internal") === "on";
+  if (body) await addEvent(item.id, TEAM, "message", body, internal);
+  if (body && !internal) await notifyClientMessage(item, body);
   redirect(`/admin/content/${item.id}#history`);
 }
 
@@ -104,7 +107,9 @@ async function clientItem(form: FormData) {
 
 export async function approveItem(form: FormData) {
   const { user, item, base } = await clientItem(form);
-  const ok = await approve(item.id, user.email);
+  const kind = await approve(item.id, user.email);
+  if (kind) await notifyTeamOfClient(item, "approved", user.email, "", kind);
+  const ok = Boolean(kind);
   revalidatePath(`/portal/c/${item.client_slug}`);
   redirect(`${base}?${ok ? "approved=1" : "error=already"}`);
 }
@@ -113,7 +118,9 @@ export async function requestItemChanges(form: FormData) {
   const { user, item, base } = await clientItem(form);
   const comment = str(form, "comment", 3000);
   if (!comment) redirect(`${base}?error=comment#respond`);
-  const ok = await requestChanges(item.id, user.email, comment);
+  const kind = await requestChanges(item.id, user.email, comment);
+  if (kind) await notifyTeamOfClient(item, "changes", user.email, `On the ${kind}: ${comment}`, kind);
+  const ok = Boolean(kind);
   revalidatePath(`/portal/c/${item.client_slug}`);
   redirect(`${base}?${ok ? "changes=1" : "error=already"}`);
 }
@@ -121,6 +128,9 @@ export async function requestItemChanges(form: FormData) {
 export async function commentOnItem(form: FormData) {
   const { user, item, base } = await clientItem(form);
   const body = str(form, "body", 2000);
-  if (body) await addEvent(item.id, user.email, "message", body);
+  if (body) {
+    await addEvent(item.id, user.email, "message", body);
+    await notifyTeamOfClient(item, "message", user.email, body);
+  }
   redirect(`${base}#history`);
 }

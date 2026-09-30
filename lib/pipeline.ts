@@ -2,6 +2,7 @@
 // client review -> scheduled -> published. Clients approve the script and the final
 // video from their portal; anything left waiting 48 hours is approved automatically.
 import { one, query } from "./db";
+import { notifyAutoApproved, notifyReviewRequested, sendReminders } from "./notify";
 
 export const stages = [
   { id: "idea", label: "Idea", client: "Planned" },
@@ -58,7 +59,7 @@ const columns = `i.id, i.client_id, c.slug AS client_slug, c.name AS client_name
   i.updated_at::text`;
 
 export async function listItems(clientId?: number): Promise<Item[]> {
-  await autoApprove();
+  await processDeadlines();
   return query<Item>(
     `SELECT ${columns} FROM content_items i JOIN clients c ON c.id = i.client_id
      ${clientId ? "WHERE i.client_id = $1" : ""}
@@ -69,7 +70,7 @@ export async function listItems(clientId?: number): Promise<Item[]> {
 
 export async function getItem(id: number): Promise<Item | undefined> {
   if (!Number.isInteger(id) || id <= 0) return undefined;
-  await autoApprove();
+  await processDeadlines();
   return one<Item>(`SELECT ${columns} FROM content_items i JOIN clients c ON c.id = i.client_id WHERE i.id = $1`, [id]);
 }
 
@@ -104,16 +105,20 @@ async function approveWhere(where: string, params: unknown[]) {
   );
 }
 
-export async function autoApprove() {
+// Runs on page loads and from the cron: approves anything past its 48 hours, then sends the
+// 24-hour reminders. Both claim rows in a single UPDATE, so overlapping runs don't double up.
+export async function processDeadlines() {
   const done = await approveWhere(`review_requested_at < now() - interval '${AUTO_APPROVE_HOURS} hours'`, []);
   for (const d of done) await addEvent(d.id, "Nirakar Media", "approved", `${reviewLabel(d.review)} approved automatically after ${AUTO_APPROVE_HOURS} hours with no reply.`);
-  return done.length;
+  if (done.length) await notifyAutoApproved(done);
+  const reminded = await sendReminders();
+  return { autoApproved: done.length, reminded };
 }
 
 export async function approve(itemId: number, actor: string) {
   const [done] = await approveWhere("id = $1", [itemId]);
   if (done) await addEvent(itemId, actor, "approved", `${reviewLabel(done.review)} approved.`);
-  return Boolean(done);
+  return done?.review ?? null;
 }
 
 export async function requestChanges(itemId: number, actor: string, comment: string) {
@@ -125,7 +130,7 @@ export async function requestChanges(itemId: number, actor: string, comment: str
     [itemId, comment],
   );
   if (row) await addEvent(itemId, actor, "changes", `Changes requested on the ${row.review}: ${comment}`);
-  return Boolean(row);
+  return row?.review ?? null;
 }
 
 // Returns an error message, or null when the item was sent.
@@ -138,6 +143,7 @@ export async function sendForReview(item: Item, kind: Review, actor: string): Pr
     [item.id, kind, kind === "video" ? "review" : "script"],
   );
   await addEvent(item.id, actor, "sent", `${reviewLabel(kind)} sent for approval.`);
+  await notifyReviewRequested(item, kind);
   return null;
 }
 

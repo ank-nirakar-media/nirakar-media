@@ -46,7 +46,7 @@ Status: **Built**, **Partial** (works but narrower than the diagram), **Later** 
 | Publishing scheduler | Later | |
 | Analytics service | Built | `lib/portal.ts`, `lib/sync.ts`, `lib/connectors` |
 | Billing service | Partial | `lib/razorpay.ts`, webhooks. No billing page inside the portal yet |
-| Notification service | Later | Contact and payment alerts go to `CONTACT_WEBHOOK_URL` for now |
+| Notification service | Partial | Email through Resend (`lib/email.ts`, `lib/notify.ts`): approval requests, 24-hour reminders, auto-approvals, messages and client replies, logged in Admin > Emails. WhatsApp is later. Contact and payment alerts still go to `CONTACT_WEBHOOK_URL` |
 | CRM / lead service | Partial | Tracked links and `/api/leads` count leads. No contact records yet |
 
 ## 4. Workflow / orchestration engine
@@ -107,7 +107,7 @@ data from a CRM or store integration. Until then the dashboard shows leads, not 
 1. ~~Onboarding and the **Brand Brain** profile.~~ Built. Asset file upload (instead of links) is still to do.
 2. ~~**Content pipeline**, calendar and **client approvals**.~~ Built. Videos are shared as links; uploads
    and automatic publishing come later.
-3. Notifications (email and WhatsApp) for approvals and reports.
+3. ~~Email notifications for approvals.~~ Built. WhatsApp (needs a Meta-approved business number and templates) and monthly report emails are still to do.
 4. **AI layer** functions plugged into pipeline steps (research, scripting, summaries, recommendations).
 5. Publishing scheduler with platform upload APIs, then LinkedIn and blog outputs.
 6. Team roles (strategist, editor, QA), audit logs, error tracking.

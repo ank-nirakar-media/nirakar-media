@@ -86,7 +86,19 @@ DATABASE_URL="postgres://..." ADMIN_EMAIL=you@nirakarmedia.com ADMIN_PASSWORD="a
    Until approved, only people with a role on the app (add them under App roles) can connect.
 7. Clients need an Instagram professional (Business or Creator) account linked to a Facebook Page.
 
-### 5. Razorpay keys (already covered in the README)
+### 5. Email through Resend (20 minutes, then DNS time)
+
+1. Sign up at resend.com. Domains > Add domain > `nirakarmedia.com`.
+2. Resend shows a few DNS records (DKIM and SPF, TXT and MX). Add them where you manage the
+   domain's DNS, the same place you added the Vercel records, then press Verify. DNS can take a few hours.
+3. API Keys > Create API key with "Sending access". Put it in Vercel as `RESEND_API_KEY`.
+4. Optional: `EMAIL_FROM` (default `Nirakar Media <hello@nirakarmedia.com>`, must be on the verified
+   domain) and `TEAM_EMAIL` (where client replies go; default is every admin login).
+5. Redeploy, open Admin > Emails and send a test. `/api/health` shows `"email": "set"`.
+
+Until the key is set nothing is sent, but every email is still listed in Admin > Emails as "skipped".
+
+### 6. Razorpay keys (already covered in the README)
 
 ## Day-to-day use
 

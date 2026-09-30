@@ -166,3 +166,18 @@ CREATE TABLE IF NOT EXISTS content_events (
 
 CREATE INDEX IF NOT EXISTS content_items_client ON content_items (client_id, stage);
 CREATE INDEX IF NOT EXISTS content_events_item ON content_events (item_id, created_at);
+
+-- When the client was last reminded about the approval they are waiting on (lib/notify.ts).
+ALTER TABLE content_items ADD COLUMN IF NOT EXISTS reminded_at TIMESTAMPTZ;
+
+-- Every email the portal sends or tries to send, shown in Admin > Emails.
+CREATE TABLE IF NOT EXISTS email_log (
+  id          SERIAL PRIMARY KEY,
+  to_email    TEXT NOT NULL,
+  subject     TEXT NOT NULL,
+  kind        TEXT NOT NULL,
+  item_id     INTEGER REFERENCES content_items(id) ON DELETE SET NULL,
+  status      TEXT NOT NULL,
+  error       TEXT NOT NULL DEFAULT '',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
