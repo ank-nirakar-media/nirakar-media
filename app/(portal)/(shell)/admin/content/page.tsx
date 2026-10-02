@@ -4,11 +4,15 @@ import { ContentCalendar, ItemFlags } from "@/components/portal/Pipeline";
 import { requireAdmin } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { formatDate, formatLabel, formats, listItems, parseMonth, platforms, stages } from "@/lib/pipeline";
+import { aiConfigured } from "@/lib/ai/claude";
+import { aiSuggestIdeas } from "../../../ai-actions";
 import { createItem } from "../../../pipeline-actions";
+
+export const maxDuration = 120;
 
 export const metadata: Metadata = { title: "Content pipeline", robots: { index: false } };
 
-export default async function AdminContent({ searchParams }: { searchParams: Promise<{ client?: string; month?: string; view?: string; error?: string }> }) {
+export default async function AdminContent({ searchParams }: { searchParams: Promise<{ client?: string; month?: string; view?: string; error?: string; ideas?: string; aierror?: string }> }) {
   await requireAdmin();
   const sp = await searchParams;
   const clients = await query<{ id: number; slug: string; name: string }>("SELECT id, slug, name FROM clients ORDER BY name");
@@ -42,6 +46,38 @@ export default async function AdminContent({ searchParams }: { searchParams: Pro
         <Link href={withView("board")} className={view === "board" ? "is-active" : ""}>Board</Link>
         <Link href={withView("calendar")} className={view === "calendar" ? "is-active" : ""}>Calendar</Link>
       </nav>
+
+      {sp.ideas && <p className="notice notice-inline" role="status">Added {sp.ideas} AI ideas to the Idea column. Edit or delete any that don&apos;t fit before you plan them.</p>}
+      {sp.aierror && <p className="notice notice-inline" role="alert">{sp.aierror}</p>}
+
+      <details className="card add-item" open={Boolean(sp.aierror)}>
+        <summary><b>Suggest ideas with AI</b></summary>
+        {!aiConfigured() ? (
+          <p className="muted" style={{ marginTop: 14 }}>AI isn&apos;t set up yet. Add ANTHROPIC_API_KEY in Vercel, then see <Link href="/admin/ai">Admin &gt; AI</Link>.</p>
+        ) : (
+          <form action={aiSuggestIdeas} className="form" style={{ marginTop: 14 }}>
+            <p className="muted">Claude reads the client&apos;s Brand Brain and what&apos;s already planned, then adds new ideas to the Idea column. Takes up to a minute.</p>
+            <div className="grid-2" style={{ gap: 14 }}>
+              <div className="field">
+                <label htmlFor="ai-client">Client</label>
+                <select id="ai-client" name="client" defaultValue={current?.slug ?? ""} required>
+                  <option value="">Choose a client</option>
+                  {clients.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="ai-count">How many</label>
+                <select id="ai-count" name="count" defaultValue="6">{[3, 6, 8, 12].map((n) => <option key={n}>{n}</option>)}</select>
+              </div>
+            </div>
+            <div className="field">
+              <label htmlFor="ai-focus">Focus (optional)</label>
+              <input id="ai-focus" name="focus" placeholder="Diwali offers, or myths about our product category" />
+            </div>
+            <div><button className="btn btn-primary btn-sm" type="submit">Suggest ideas</button></div>
+          </form>
+        )}
+      </details>
 
       <details className="card add-item" open={items.length === 0 || Boolean(sp.error)}>
         <summary><b>Add a content item</b></summary>

@@ -98,7 +98,15 @@ DATABASE_URL="postgres://..." ADMIN_EMAIL=you@nirakarmedia.com ADMIN_PASSWORD="a
 
 Until the key is set nothing is sent, but every email is still listed in Admin > Emails as "skipped".
 
-### 6. Razorpay keys (already covered in the README)
+### 6. Claude, for the AI Studio (5 minutes)
+
+1. Sign in at console.anthropic.com, add billing, and create an API key.
+2. Add it in Vercel as `ANTHROPIC_API_KEY` (Production and Preview) and redeploy.
+3. Open Admin > AI. It should say "AI drafting is on".
+
+It uses `claude-opus-5-5` unless you set `AI_MODEL`. A script draft costs a few rupees; Admin > AI shows the month's total.
+
+### 7. Razorpay keys (already covered in the README)
 
 ## Day-to-day use
 

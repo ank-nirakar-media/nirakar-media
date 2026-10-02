@@ -36,6 +36,7 @@ export async function GET() {
     cronSecret: !cron ? "missing" : cron.length < 16 ? "too short" : "ok",
     razorpay: await razorpayKeyStatus(),
     razorpayWebhookSecret: set("RAZORPAY_WEBHOOK_SECRET"),
+    ai: set("ANTHROPIC_API_KEY"),
     youtube: process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? "set" : "not yet",
     instagram: process.env.META_APP_ID && process.env.META_APP_SECRET ? "set" : "not yet",
     email: process.env.RESEND_API_KEY ? "set" : "missing",

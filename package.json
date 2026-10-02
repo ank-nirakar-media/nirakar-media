@@ -10,6 +10,7 @@
     "seed": "node scripts/seed.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
     "@electric-sql/pglite": "^0.5.8",
     "next": "^15.5.26",
     "postgres": "^3.4.9",

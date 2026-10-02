@@ -4,11 +4,16 @@ import { notFound } from "next/navigation";
 import { ItemFlags } from "@/components/portal/Pipeline";
 import { requireAdmin } from "@/lib/auth";
 import { autoApproveAt, formatTime, formats, getItem, listEvents, platforms, reviewLabel, stages } from "@/lib/pipeline";
+import { aiConfigured } from "@/lib/ai/claude";
+import { loadScenes } from "@/lib/ai/studio";
+import { aiDraftScript } from "../../../../ai-actions";
 import { addItemMessage, deleteItem, sendItemForReview, updateItem } from "../../../../pipeline-actions";
+
+export const maxDuration = 120;
 
 export const metadata: Metadata = { title: "Content item", robots: { index: false } };
 
-export default async function AdminItem({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; sent?: string; error?: string }> }) {
+export default async function AdminItem({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; sent?: string; error?: string; drafted?: string }> }) {
   await requireAdmin();
   const { id } = await params;
   const sp = await searchParams;
@@ -16,6 +21,8 @@ export default async function AdminItem({ params, searchParams }: { params: Prom
   if (!item) notFound();
   const events = await listEvents(item.id, true);
   const due = autoApproveAt(item);
+  const scenes = await loadScenes(item.id);
+  const ai = aiConfigured();
 
   return (
     <section className="wrap section-tight stack" style={{ gap: 22, maxWidth: 900 }}>
@@ -30,6 +37,7 @@ export default async function AdminItem({ params, searchParams }: { params: Prom
 
       {sp.saved && <p className="notice notice-inline" role="status">Saved.</p>}
       {sp.sent && <p className="notice notice-inline" role="status">{reviewLabel(sp.sent)} sent to the client for approval. It approves itself automatically if they don&apos;t reply in 48 hours.</p>}
+      {sp.drafted && <p className="notice notice-inline" role="status">AI draft saved. Read it, edit anything that&apos;s off, and fill any [placeholders] before you send it to the client.</p>}
       {sp.error && <p className="notice notice-inline" role="alert">{sp.error}</p>}
       {item.review && due && (
         <p className="notice notice-inline" role="status">Waiting for the client to approve the {item.review}. Auto-approves on {formatTime(due.toISOString())}.</p>
@@ -56,6 +64,28 @@ export default async function AdminItem({ params, searchParams }: { params: Prom
         </div>
       </div>
 
+      <div className="card form studio-box">
+        <h3>AI Studio</h3>
+        {ai ? (
+          <form action={aiDraftScript} className="form">
+            <input type="hidden" name="id" value={item.id} />
+            <p className="muted">
+              {item.changes_requested && item.script
+                ? "Redraft the script using the client's change request and the Brand Brain."
+                : "Draft the script, scene plan and post caption from the brief and the client's Brand Brain."}{" "}
+              It saves as a draft here. Nothing goes to the client until you send it.
+            </p>
+            <div className="btn-row">
+              {item.script.trim() && <label className="check"><input type="checkbox" name="replace" /> Replace the current script (the old one is kept in history)</label>}
+              <button className="btn btn-primary btn-sm" type="submit" disabled={item.review === "script"}>{item.script.trim() ? "Redraft with AI" : "Draft script with AI"}</button>
+            </div>
+            <p className="fine">Takes up to a minute. {item.ai_drafted_at && `Last AI draft ${formatTime(item.ai_drafted_at)}.`}</p>
+          </form>
+        ) : (
+          <p className="muted">AI drafting isn&apos;t set up yet. Add ANTHROPIC_API_KEY in Vercel, then see <Link href="/admin/ai">Admin &gt; AI</Link>.</p>
+        )}
+      </div>
+
       <form action={updateItem} className="card form">
         <input type="hidden" name="id" value={item.id} />
         <div className="grid-2" style={{ gap: 14 }}>
@@ -77,10 +107,29 @@ export default async function AdminItem({ params, searchParams }: { params: Prom
           <div className="field"><label htmlFor="publish_on">Publish on</label><input id="publish_on" name="publish_on" type="date" defaultValue={item.publish_on ?? ""} /></div>
         </div>
         <div className="field"><label htmlFor="brief">Brief</label><textarea id="brief" name="brief" rows={3} defaultValue={item.brief} /></div>
-        <div className="field">
-          <label htmlFor="script">Script</label>
+        <div className="field" id="script">
+          <label htmlFor="script-text">Script</label>
           <p className="fine">The client sees this once you send it for approval.</p>
-          <textarea id="script" name="script" rows={12} defaultValue={item.script} />
+          <textarea id="script-text" name="script" rows={12} defaultValue={item.script} />
+        </div>
+        {scenes.length > 0 && (
+          <details className="scene-plan">
+            <summary>Scene plan from the AI draft ({scenes.length} scenes, about {scenes.reduce((n, s) => n + s.seconds, 0)} seconds)</summary>
+            <p className="fine">For the editor. It isn&apos;t updated when you edit the script.</p>
+            <ol>
+              {scenes.map((s, i) => (
+                <li key={i}>
+                  <span className="fine">{s.seconds}s · Visual: {s.visual}{s.on_screen_text && ` · On screen: "${s.on_screen_text}"`}</span>
+                  <span className="brand-text">{s.voiceover}</span>
+                </li>
+              ))}
+            </ol>
+          </details>
+        )}
+        <div className="field">
+          <label htmlFor="caption">Post caption and hashtags</label>
+          <p className="fine">Used when the video is published.</p>
+          <textarea id="caption" name="caption" rows={4} defaultValue={item.caption} />
         </div>
         <div className="grid-2" style={{ gap: 14 }}>
           <div className="field">

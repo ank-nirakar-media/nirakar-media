@@ -72,6 +72,8 @@ database are in `docs/client-portal.md`.
 - **Email notifications** (`lib/notify.ts`, Admin > Emails): clients get approval requests, a reminder
   after 24 hours and messages from you; you get their approvals, change requests and messages. Sent
   through Resend with `RESEND_API_KEY`; setup steps are in `docs/client-portal.md`.
+- **AI Studio** (`lib/ai/*`, Admin > AI): Claude suggests video ideas from a client's Brand Brain and
+  drafts scripts, scene plans and captions, all as drafts for you to edit. Needs `ANTHROPIC_API_KEY`.
 - **Connected accounts**: clients (or you, as admin) connect YouTube and Instagram with read-only
   OAuth. Tokens are encrypted with `ENCRYPTION_KEY`.
 - **Daily sync**: Vercel Cron calls `/api/cron/sync` at 01:30 UTC (7:00 IST) and `/api/cron/deadlines` at 13:30 UTC (19:00 IST) with `CRON_SECRET`. Deadlines (reminders, auto-approvals) also run whenever the portal is opened.
