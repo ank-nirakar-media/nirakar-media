@@ -48,7 +48,7 @@ export async function updateItem(form: FormData) {
   const nextStage = isStage(stage) ? stage : item.stage;
   await query(
     `UPDATE content_items SET title = $2, format = $3, platform = $4, language = $5, brief = $6, script = $7,
-       video_url = $8, published_url = $9, internal_notes = $10, due_date = $11, publish_on = $12, stage = $13,
+       video_url = $8, published_url = $9, internal_notes = $10, due_date = $11, publish_on = $12, stage = $13, caption = $14,
        review = CASE WHEN $13 IN ('published', 'idea') THEN NULL ELSE review END,
        review_requested_at = CASE WHEN $13 IN ('published', 'idea') THEN NULL ELSE review_requested_at END,
        updated_at = now()
@@ -59,7 +59,7 @@ export async function updateItem(form: FormData) {
       pick(str(form, "platform"), platforms, ""),
       str(form, "language", 60), str(form, "brief", 3000), str(form, "script", 20000),
       link(form, "video_url"), link(form, "published_url"), str(form, "internal_notes", 5000),
-      date(form, "due_date"), date(form, "publish_on"), nextStage,
+      date(form, "due_date"), date(form, "publish_on"), nextStage, str(form, "caption", 5000),
     ],
   );
   if (nextStage !== item.stage) await addEvent(item.id, TEAM, "stage", `Moved to ${stageOf(nextStage).client}.`);

@@ -629,3 +629,11 @@ code { font-family: var(--font-mono); font-size: .84em; overflow-wrap: anywhere;
   .header, .dash-tabs, .btn, .fine, form { display: none !important; }
   .dash, .kpi, .dash-card { box-shadow: none; background: #fff; break-inside: avoid; }
 }
+
+/* AI Studio */
+.studio-box { border-color: color-mix(in srgb, var(--violet) 45%, transparent); }
+.stat-row { display: flex; align-items: baseline; gap: 10px; }
+.stat-row b { font-size: 1.6rem; }
+.scene-plan summary { cursor: pointer; font-weight: 600; }
+.scene-plan ol { margin: 12px 0 0; padding-left: 20px; display: grid; gap: 12px; }
+.scene-plan li { display: grid; gap: 4px; }

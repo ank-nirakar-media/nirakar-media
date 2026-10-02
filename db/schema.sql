@@ -181,3 +181,21 @@ CREATE TABLE IF NOT EXISTS email_log (
   error       TEXT NOT NULL DEFAULT '',
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- AI Studio: drafts made with Claude, and a log of every AI call with its cost.
+ALTER TABLE content_items ADD COLUMN IF NOT EXISTS scenes JSONB;
+ALTER TABLE content_items ADD COLUMN IF NOT EXISTS caption TEXT NOT NULL DEFAULT '';
+ALTER TABLE content_items ADD COLUMN IF NOT EXISTS ai_drafted_at TIMESTAMPTZ;
+CREATE TABLE IF NOT EXISTS ai_runs (
+  id             SERIAL PRIMARY KEY,
+  client_id      INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+  item_id        INTEGER REFERENCES content_items(id) ON DELETE SET NULL,
+  kind           TEXT NOT NULL,
+  model          TEXT NOT NULL DEFAULT '',
+  status         TEXT NOT NULL,
+  input_tokens   INTEGER NOT NULL DEFAULT 0,
+  output_tokens  INTEGER NOT NULL DEFAULT 0,
+  cost_usd       NUMERIC(10, 4) NOT NULL DEFAULT 0,
+  error          TEXT NOT NULL DEFAULT '',
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);

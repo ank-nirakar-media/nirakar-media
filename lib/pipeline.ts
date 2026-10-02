@@ -49,6 +49,8 @@ export type Item = {
   changes_requested: string;
   script_approved_at: string | null;
   video_approved_at: string | null;
+  caption: string;
+  ai_drafted_at: string | null;
   updated_at: string;
 };
 export type Event = { id: number; actor: string; kind: string; body: string; internal: boolean; created_at: string };
@@ -56,7 +58,7 @@ export type Event = { id: number; actor: string; kind: string; body: string; int
 const columns = `i.id, i.client_id, c.slug AS client_slug, c.name AS client_name, i.title, i.format, i.platform, i.language,
   i.stage, i.brief, i.script, i.video_url, i.published_url, i.internal_notes, i.due_date::text, i.publish_on::text,
   i.review, i.review_requested_at::text, i.changes_requested, i.script_approved_at::text, i.video_approved_at::text,
-  i.updated_at::text`;
+  i.caption, i.ai_drafted_at::text, i.updated_at::text`;
 
 export async function listItems(clientId?: number): Promise<Item[]> {
   await processDeadlines();

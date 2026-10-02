@@ -21,6 +21,7 @@ export default async function ShellLayout({ children }: { children: React.ReactN
             {own && <Link href={`/portal/c/${own.slug}/connections`}>Connected accounts</Link>}
             {user.role === "admin" && <Link href="/admin">Clients</Link>}
             {user.role === "admin" && <Link href="/admin/content">Content</Link>}
+            {user.role === "admin" && <Link href="/admin/ai">AI</Link>}
             {user.role === "admin" && <Link href="/admin/emails">Emails</Link>}
             <span className="portal-user">{user.email}</span>
             <form action={logout}><button className="btn btn-ghost btn-sm" type="submit">Log out</button></form>

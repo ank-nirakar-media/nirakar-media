@@ -57,8 +57,14 @@ In the app, the first version would be a status field on each content item plus 
 
 ## 5. AI and automation layer
 
-**Later.** None of the AI boxes run inside the app yet. The team uses AI tools directly. When built, each
-becomes a function in `lib/ai/*` that the pipeline calls, with an LLM provider behind an env var.
+**Partial.** `lib/ai/claude.ts` is the single Claude connection (ANTHROPIC_API_KEY, optional AI_MODEL). It asks
+for schema-checked JSON and logs every call with its cost to `ai_runs`. `lib/ai/studio.ts` uses it for:
+
+- Topic ideas from the Brand Brain, added to a client's Idea column (Admin > Content > Suggest ideas with AI).
+- Script, scene plan and post caption for an item, or a redraft from the client's change request.
+
+Everything AI makes is a draft for the team; nothing reaches a client until it is sent for approval. Admin > AI
+shows status, monthly cost and the call log. Voiceover, visuals and video rendering are the next part of this layer.
 
 ## 6. Human review / operations
 
@@ -83,7 +89,8 @@ managing links, plus the content pipeline board. Separate editor and QA logins c
 | Social platform APIs | Partial | YouTube Data and Analytics, Instagram Graph. Read-only |
 | Payment gateway | Built | Razorpay Subscriptions (Stripe is invite-only in India) |
 | Email / WhatsApp / Slack | Partial | One outbound webhook |
-| OpenAI / Claude LLM APIs, voice API, video tools | Later | |
+| Claude API | Built | Ideas, scripts, scene plans, captions |
+| Voice API, stock footage, video rendering | Later | Next step of the AI Studio |
 | CRM (HubSpot etc.), CMS (WordPress etc.) | Later | |
 
 ## 9. Platform ops
@@ -108,6 +115,7 @@ data from a CRM or store integration. Until then the dashboard shows leads, not 
 2. ~~**Content pipeline**, calendar and **client approvals**.~~ Built. Videos are shared as links; uploads
    and automatic publishing come later.
 3. ~~Email notifications for approvals.~~ Built. WhatsApp (needs a Meta-approved business number and templates) and monthly report emails are still to do.
-4. **AI layer** functions plugged into pipeline steps (research, scripting, summaries, recommendations).
+4. **AI layer.** Ideas, scripts, scene plans and captions are built (AI Studio). Next: voiceover, visuals and
+   rendering a finished video, then monthly summaries and recommendations.
 5. Publishing scheduler with platform upload APIs, then LinkedIn and blog outputs.
 6. Team roles (strategist, editor, QA), audit logs, error tracking.
