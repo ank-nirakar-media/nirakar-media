@@ -4,24 +4,33 @@ import type { Plan } from "./plans";
 // Minimal Razorpay REST client (no SDK needed). Keys come from env vars.
 const API = process.env.RAZORPAY_API_BASE || "https://api.razorpay.com/v1";
 
+// Trimmed, because a space or line break pasted along with a key makes Razorpay answer 401.
+export const razorpayKeyId = () => (process.env.RAZORPAY_KEY_ID ?? "").trim();
+const keySecret = () => (process.env.RAZORPAY_KEY_SECRET ?? "").trim();
+const webhookSecret = () => (process.env.RAZORPAY_WEBHOOK_SECRET ?? "").trim();
+
 export function razorpayConfigured(): boolean {
-  return Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
+  return Boolean(razorpayKeyId() && keySecret());
 }
 
 // Checks the keys against Razorpay without changing anything. Never returns the keys.
-export async function razorpayKeyStatus(): Promise<{ status: string; mode?: string }> {
+// The key ID is public (checkout shows it to every buyer), so it is safe to show here. The
+// secret is never shown, only its length, which helps spot a wrong or half-copied paste.
+export async function razorpayKeyStatus(): Promise<{ status: string; mode?: string; keyId?: string; secretLength?: number }> {
   if (!razorpayConfigured()) return { status: "missing" };
-  const mode = process.env.RAZORPAY_KEY_ID!.startsWith("rzp_live_") ? "live" : process.env.RAZORPAY_KEY_ID!.startsWith("rzp_test_") ? "test" : "unknown";
+  const id = razorpayKeyId();
+  const mode = id.startsWith("rzp_live_") ? "live" : id.startsWith("rzp_test_") ? "test" : "unknown";
+  const info = { mode, keyId: id, secretLength: keySecret().length };
   try {
     await call("GET", "/plans?count=1");
-    return { status: "ok", mode };
+    return { status: "ok", ...info };
   } catch (e) {
-    return { status: `rejected (${(e as Error).message.slice(0, 80)})`, mode };
+    return { status: `rejected (${(e as Error).message.slice(0, 80)})`, ...info };
   }
 }
 
 async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
-  const auth = Buffer.from(`${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`).toString("base64");
+  const auth = Buffer.from(`${razorpayKeyId()}:${keySecret()}`).toString("base64");
   const res = await fetch(`${API}${path}`, {
     method,
     headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" },
@@ -92,7 +101,7 @@ function safeEqual(a: string, b: string) {
 // Checkout success: HMAC_SHA256(payment_id + "|" + subscription_id, key_secret)
 export function verifyPaymentSignature(paymentId: string, subscriptionId: string, signature: string) {
   const expected = crypto
-    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "")
+    .createHmac("sha256", keySecret())
     .update(`${paymentId}|${subscriptionId}`)
     .digest("hex");
   return safeEqual(expected, signature);
@@ -100,7 +109,7 @@ export function verifyPaymentSignature(paymentId: string, subscriptionId: string
 
 // Webhooks: HMAC_SHA256(raw body, webhook secret) in X-Razorpay-Signature
 export function verifyWebhookSignature(body: string, signature: string) {
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  const secret = webhookSecret();
   if (!secret) return false;
   const expected = crypto.createHmac("sha256", secret).update(body).digest("hex");
   return safeEqual(expected, signature);
