@@ -4,7 +4,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { formatInr, getPlan } from "@/lib/plans";
-import { planAmountInr, planName } from "@/lib/razorpay";
+import { planAmountInr, planName, razorpayKeyId } from "@/lib/razorpay";
 import { PayButton } from "./PayButton";
 
 export const metadata: Metadata = { title: "Complete your subscription", robots: { index: false } };
@@ -14,7 +14,7 @@ type Search = { sub?: string; plan?: string; lang?: string };
 export default async function PayPage({ searchParams }: { searchParams: Promise<Search> }) {
   const { sub = "", plan: planId = "", lang = "0" } = await searchParams;
   const plan = getPlan(planId);
-  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keyId = razorpayKeyId();
   if (!plan || !/^sub_[A-Za-z0-9]+$/.test(sub) || !keyId) redirect("/pricing?error=checkout");
 
   const extra = Math.min(3, Math.max(0, Number(lang) || 0));
