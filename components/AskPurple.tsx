@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { DISCLAIMER } from "@/lib/ask/disclaimer";
-import { LogoMark } from "./Logo";
+import { AskPurpleMark } from "./AskPurpleMark";
 
 type Checkout = { plan: string; name: string; price: string };
 type Msg = { role: "user" | "assistant"; text: string; checkout?: Checkout };
@@ -82,7 +82,7 @@ export function AskPurple() {
       {open && (
         <section className="ask-panel" aria-label="Ask Purple chat">
           <header className="ask-head">
-            <LogoMark size={26} />
+            <AskPurpleMark size={34} />
             <div>
               <b>Ask Purple</b>
               <span className="fine">AI assistant for Nirakar Media</span>
@@ -123,7 +123,7 @@ export function AskPurple() {
         </section>
       )}
       <button type="button" className="ask-launch" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        <LogoMark size={22} /> {open ? "Close" : "Ask Purple"}
+        <AskPurpleMark size={30} /> {open ? "Close" : "Ask Purple"}
       </button>
     </div>
   );
