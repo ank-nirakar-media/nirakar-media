@@ -29,7 +29,22 @@ type Call = {
   schema: Record<string, unknown>;
   effort?: Effort;
   maxTokens?: number;
+  // Optional overrides for chat: another model, earlier turns (prompt is the newest user turn),
+  // and caching the system prompt, which stays the same on every turn.
+  model?: string;
+  history?: { role: "user" | "assistant"; content: string }[];
+  cacheSystem?: boolean;
 };
+
+// Haiku 4.5 rejects output_config.effort, and server-side fallbacks are only offered for the
+// larger models, so both are sent only to models that take them.
+const isHaiku = (model: string) => model.startsWith("claude-haiku");
+
+// The API reports dated ids such as claude-haiku-4-5-20251001, so match on the longest known prefix.
+export function priceFor(model: string): [number, number] {
+  const key = Object.keys(prices).filter((k) => model.startsWith(k)).sort((a, b) => b.length - a.length)[0];
+  return prices[key ?? "claude-opus-5-5"];
+}
 
 let client: Anthropic | undefined;
 const anthropic = () => (client ??= new Anthropic({ timeout: 110_000, maxRetries: 1 }));
@@ -37,7 +52,7 @@ const anthropic = () => (client ??= new Anthropic({ timeout: 110_000, maxRetries
 async function log(c: Call, model: string, status: string, usage: { input_tokens?: number | null; output_tokens?: number | null } | undefined, error = "") {
   const input = usage?.input_tokens ?? 0;
   const output = usage?.output_tokens ?? 0;
-  const [pin, pout] = prices[model] ?? prices["claude-opus-5-5"];
+  const [pin, pout] = priceFor(model);
   const cost = (input * pin + output * pout) / 1e6;
   await query(
     `INSERT INTO ai_runs (client_id, item_id, kind, model, status, input_tokens, output_tokens, cost_usd, error)
@@ -47,20 +62,20 @@ async function log(c: Call, model: string, status: string, usage: { input_tokens
 }
 
 export async function generateJson<T>(c: Call): Promise<AiResult<T>> {
-  const model = aiModel();
+  const model = c.model || aiModel();
   if (!aiConfigured()) {
     await log(c, model, "skipped", undefined, "ANTHROPIC_API_KEY is not set");
     return { ok: false, error: "AI isn't set up yet. Add ANTHROPIC_API_KEY in Vercel." };
   }
   try {
+    const haiku = isHaiku(model);
     const res = await anthropic().beta.messages.create({
       model,
       max_tokens: c.maxTokens ?? 16000,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-      output_config: { effort: c.effort ?? "medium", format: { type: "json_schema", schema: c.schema } },
-      system: c.system,
-      messages: [{ role: "user", content: c.prompt }],
+      ...(haiku ? {} : { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }),
+      output_config: { ...(haiku ? {} : { effort: c.effort ?? "medium" }), format: { type: "json_schema", schema: c.schema } },
+      system: c.cacheSystem ? [{ type: "text", text: c.system, cache_control: { type: "ephemeral" } }] : c.system,
+      messages: [...(c.history ?? []), { role: "user", content: c.prompt }],
     });
     if (res.stop_reason === "refusal") {
       await log(c, res.model, "refused", res.usage, res.stop_details?.explanation ?? "");

@@ -1,3 +1,4 @@
+import { AskPurple } from "@/components/AskPurple";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 
@@ -7,6 +8,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       <Header />
       <main>{children}</main>
       <Footer />
+      <AskPurple />
     </>
   );
 }

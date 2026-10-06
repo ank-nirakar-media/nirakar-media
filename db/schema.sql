@@ -199,3 +199,35 @@ CREATE TABLE IF NOT EXISTS ai_runs (
   error          TEXT NOT NULL DEFAULT '',
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Ask Purple (lib/ask): website chat conversations and every message in them, read in Admin > Chats.
+-- visitor is a random id from a cookie, never an IP address. Lead fields are filled only when
+-- the visitor chooses to leave their details.
+CREATE TABLE IF NOT EXISTS chat_conversations (
+  id              TEXT PRIMARY KEY,
+  visitor         TEXT NOT NULL,
+  page            TEXT NOT NULL DEFAULT '',
+  outcome         TEXT NOT NULL DEFAULT 'open',
+  lead_name       TEXT NOT NULL DEFAULT '',
+  lead_email      TEXT NOT NULL DEFAULT '',
+  lead_phone      TEXT NOT NULL DEFAULT '',
+  lead_need       TEXT NOT NULL DEFAULT '',
+  handed_over_at  TIMESTAMPTZ,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id               SERIAL PRIMARY KEY,
+  conversation_id  TEXT NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
+  role             TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+  body             TEXT NOT NULL,
+  intent           TEXT NOT NULL DEFAULT '',
+  action           TEXT NOT NULL DEFAULT '',
+  plan             TEXT NOT NULL DEFAULT '',
+  status           TEXT NOT NULL DEFAULT 'ok',
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS chat_messages_conversation ON chat_messages (conversation_id, id);
+CREATE INDEX IF NOT EXISTS chat_conversations_visitor ON chat_conversations (visitor, created_at);
