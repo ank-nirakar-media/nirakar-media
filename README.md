@@ -97,6 +97,19 @@ laptop but not on Vercel, where the filesystem is temporary: set `DATABASE_URL` 
 `POST /api/contact` forwards leads as JSON to `CONTACT_WEBHOOK_URL` (Zapier, Make,
 Slack incoming webhook, Google Apps Script...). Without it, leads are only written to the server log.
 
+## Ask Purple (website chat)
+
+A chat button on every public page (`components/AskPurple.tsx`) posts to `POST /api/ask`. Phase 1 is
+the Sales agent (`lib/ask/sales.ts`): one Claude call labels the intent and answers from a knowledge
+pack built from `lib/plans.ts` and `lib/content.ts` (`lib/ask/knowledge.ts`). Code checks every reply:
+rupee amounts must be published prices, checkout buttons are built from `lib/plans.ts`, and leads or
+handovers are saved and emailed to `ASK_HANDOVER_EMAIL` (default: the contact email). Conversations
+are in Admin > Chats, costs in Admin > AI.
+
+- `ASK_MODEL` (optional): defaults to `claude-haiku-4-5`. Uses the same `ANTHROPIC_API_KEY`.
+- Limits (`LIMITS` in `lib/ask/sales.ts`): 20 messages a chat, 50 a visitor a day, ₹300 of AI cost a day.
+- The disclaimer under the chat box is in `lib/ask/disclaimer.ts`.
+
 ## Deploy to Vercel
 
 1. Push this folder to a GitHub repo.

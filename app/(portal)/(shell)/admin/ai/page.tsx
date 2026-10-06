@@ -7,7 +7,7 @@ import { formatTime } from "@/lib/pipeline";
 
 export const metadata: Metadata = { title: "AI", robots: { index: false } };
 
-const kinds: Record<string, string> = { ideas: "Ideas", script: "Script", "script-revision": "Script revision" };
+const kinds: Record<string, string> = { ideas: "Ideas", script: "Script", "script-revision": "Script revision", ask: "Ask Purple chat" };
 const inr = (usd: number) => `₹${(usd * USD_TO_INR).toLocaleString("en-IN", { maximumFractionDigits: usd * USD_TO_INR < 10 ? 1 : 0 })}`;
 
 export default async function AdminAi() {
@@ -28,7 +28,7 @@ export default async function AdminAi() {
         </div>
         <div className="card stack" style={{ gap: 10 }}>
           <h3>This month</h3>
-          <div className="stat-row"><b>{runs}</b><span className="muted">AI drafts</span></div>
+          <div className="stat-row"><b>{runs}</b><span className="muted">AI calls</span></div>
           <div className="stat-row"><b>{inr(costUsd)}</b><span className="muted">about ${costUsd.toFixed(2)} in API cost</span></div>
           <p className="fine">Rupee figures use ₹{USD_TO_INR} to the dollar. Your Anthropic bill is the exact amount.</p>
         </div>
@@ -39,6 +39,7 @@ export default async function AdminAi() {
         <ul className="plain-list fine">
           <li>Content &gt; Suggest ideas with AI: new video ideas from a client&apos;s Brand Brain, added to the Idea column.</li>
           <li>On a content item: a script, scene plan and post caption, or a redraft from the client&apos;s change request.</li>
+          <li>Ask Purple, the website chat: answers questions about plans and sends visitors to checkout or to you. Conversations are in <Link href="/admin/chats">Chats</Link>.</li>
           <li>Everything is a draft. Nothing reaches a client until you send it for approval.</li>
         </ul>
       </div>
