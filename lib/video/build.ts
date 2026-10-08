@@ -13,6 +13,7 @@ export function planFromScenes(o: {
   layout?: Layout;
   seed?: number; // picks the layout when none is given, usually the content item id
   watermark?: string;
+  captionLead?: number; // seconds before the first word of each scene; smaller for one continuous take
 }): VideoPlan {
   const scenes: PlanScene[] = o.scenes
     .filter((s) => s.voiceover.trim() || s.on_screen_text.trim())
@@ -23,7 +24,7 @@ export function planFromScenes(o: {
         durationSec,
         audioSrc: s.audioSrc,
         visual: s.media ?? { kind: "color" },
-        words: timeWords(s.voiceover, durationSec),
+        words: o.captionLead === undefined ? timeWords(s.voiceover, durationSec) : timeWords(s.voiceover, durationSec, o.captionLead, 0.1),
         onScreenText: s.on_screen_text.trim(),
       };
     });

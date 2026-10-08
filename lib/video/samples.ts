@@ -1,7 +1,7 @@
 // Example videos for the website demo. The businesses are made up and labelled as examples on the page.
 // Scripts follow our own rules: no invented prices, results or statistics.
 import { planFromScenes, type SceneInput } from "./build";
-import type { Brand, Layout, VideoPlan } from "./plan";
+import { splitTake, type Brand, type Layout, type VideoPlan } from "./plan";
 
 // say: what the voice reads. Hinglish captions stay in Roman script, the voice gets Devanagari (Sarvam reads it better).
 // Spoken lines never include the business name, so the voice still fits when a visitor types their own name.
@@ -58,16 +58,26 @@ export const WATERMARK = "Sample by Nirakar Media";
 
 // Real voice lengths per scene, in seconds, once the voice files have loaded in the browser.
 export type VoiceTrack = { src: string; seconds: number }[];
+// One continuous take of the whole script, so pace and tone stay even from line to line.
+export type VoiceTake = { src: string; seconds: number };
+
+// What the voice reads for a whole example video, in one go.
+export const fullSay = (s: Pick<Sample, "scenes">) => s.scenes.map((x) => x.say.trim()).join(" ");
 // Background clips per scene, from /api/sample-media. A missing clip falls back to the brand gradient.
 export type SampleClip = { src: string; credit: string; pageUrl: string; source: "Pexels" | "Pixabay" } | null;
 
-export function samplePlan(s: Sample, brand?: Brand, voice?: VoiceTrack, clips?: SampleClip[]): VideoPlan {
+export function samplePlan(s: Sample, brand?: Brand, voice?: VoiceTake, clips?: SampleClip[]): VideoPlan {
   const b = brand ?? s.brand;
+  // With a voice take, scene lengths come from splitting it by what each scene says; the last scene
+  // gets a short tail so the video doesn't cut off on the final word.
+  const lengths = voice ? splitTake(s.scenes.map((x) => x.say), voice.seconds) : undefined;
+  if (lengths) lengths[lengths.length - 1] += 0.6;
   const scenes = s.scenes.map((x, i) => ({
     voiceover: x.voiceover,
     on_screen_text: brand ? x.on_screen_text.replaceAll(s.brand.name, b.name) : x.on_screen_text,
-    ...(voice?.[i] ? { audioSrc: voice[i].src, audioSec: voice[i].seconds + 0.35 } : {}),
+    ...(lengths ? { audioSec: lengths[i] } : {}),
     ...(clips?.[i] ? { media: { kind: "video" as const, src: clips[i]!.src, credit: clips[i]!.credit, license: `${clips[i]!.source} License` } } : {}),
   }));
-  return planFromScenes({ scenes, brand: b, language: s.language, layout: s.layout, watermark: WATERMARK });
+  const plan = planFromScenes({ scenes, brand: b, language: s.language, layout: s.layout, watermark: WATERMARK, captionLead: lengths ? 0.05 : undefined });
+  return voice ? { ...plan, voiceover: { src: voice.src } } : plan;
 }

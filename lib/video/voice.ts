@@ -6,9 +6,21 @@
 export const voiceConfigured = () => Boolean(process.env.SARVAM_API_KEY);
 
 export const VOICE_MODEL = "bulbul:v3";
+export const VOICE_MODELS = ["bulbul:v3", "bulbul:v4-flash"] as const;
 export const VOICE_MAX_CHARS = 2500;
 
-export type VoiceRequest = { text: string; languageCode: string; speaker: string; pace?: number };
+// The 37 bulbul:v3 speakers listed in Sarvam's API reference on 2026-10-08. bulbul:v4-flash has 200+
+// persona voices named like shubh_hi_devotional; its full list is only in the Sarvam dashboard.
+export const V3_SPEAKERS = [
+  "shubh", "aditya", "ritu", "priya", "neha", "rahul", "pooja", "rohan", "simran", "kavya", "amit", "dev", "ishita",
+  "shreya", "ratan", "varun", "manan", "sumit", "roopa", "kabir", "aayan", "ashutosh", "advait", "anand", "tanya",
+  "tarun", "sunny", "mani", "gokul", "vijay", "shruti", "suhani", "mohit", "kavitha", "rehan", "soham", "rupali",
+];
+
+export type VoiceRequest = { text: string; languageCode: string; speaker: string; model?: string; pace?: number };
+
+// Speaker ids are lowercase letters, digits and underscores (Sarvam docs: names are case-sensitive, lowercase).
+export const validSpeaker = (s: string) => /^[a-z][a-z0-9_]{1,60}$/.test(s);
 
 export async function synthesize(r: VoiceRequest): Promise<{ ok: true; audio: Buffer } | { ok: false; error: string }> {
   const key = process.env.SARVAM_API_KEY;
@@ -18,7 +30,7 @@ export async function synthesize(r: VoiceRequest): Promise<{ ok: true; audio: Bu
     const res = await fetch("https://api.sarvam.ai/text-to-speech", {
       method: "POST",
       headers: { "api-subscription-key": key, "content-type": "application/json" },
-      body: JSON.stringify({ text: r.text, language_code: r.languageCode, model: VOICE_MODEL, speaker: r.speaker, pace: r.pace ?? 1, output_audio_codec: "mp3" }),
+      body: JSON.stringify({ text: r.text, language_code: r.languageCode, model: r.model ?? VOICE_MODEL, speaker: r.speaker, pace: r.pace ?? 1, output_audio_codec: "mp3" }),
       signal: AbortSignal.timeout(30_000),
     });
     if (!res.ok) return { ok: false, error: `Sarvam ${res.status}: ${(await res.text()).slice(0, 200)}` };

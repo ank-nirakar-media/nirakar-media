@@ -11,12 +11,14 @@ import { ServiceIcon } from "@/components/ServiceIcon";
 import { WalkthroughPlayer } from "@/components/WalkthroughPlayer";
 import { footageConfigured } from "@/lib/video/footage";
 import { voiceConfigured } from "@/lib/video/voice";
+import { loadVoiceSettings, settingsKey } from "@/lib/video/voice-settings";
 
 // Re-checked every minute so the founding-offer seat count stays current.
 export const revalidate = 60;
 
 export default async function Home() {
   const offer = await offerForDisplay();
+  const voice = voiceConfigured() ? settingsKey(await loadVoiceSettings()) : null;
   return (
     <>
       <section className="hero">
@@ -81,7 +83,7 @@ export default async function Home() {
             </div>
             <Link href="/sample-video" className="eyebrow link-arrow">Try it with your business →</Link>
           </div>
-          <WalkthroughPlayer voice={voiceConfigured()} footage={footageConfigured()} />
+          <WalkthroughPlayer voice={voice} footage={footageConfigured()} />
           <div className="btn-row" style={{ marginTop: 24 }}><Link href="/sample-video" className="btn btn-primary">See sample videos</Link><Link href="/sample-video#free-sample" className="btn btn-ghost">Get a free sample</Link></div>
         </div>
       </section>

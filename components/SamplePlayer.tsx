@@ -6,14 +6,14 @@ import { useSampleClips, useSampleVoice } from "./useSampleVoice";
 import { VideoPreview } from "./VideoPreview";
 
 // One example video with its voice and footage, for the gallery and the home page.
-export function SamplePlayer({ id, voice, footage, label }: { id: string; voice: boolean; footage: boolean; label: string }) {
+export function SamplePlayer({ id, voice, footage, label }: { id: string; voice: string | null; footage: boolean; label: string }) {
   const sample = samples.find((s) => s.id === id) ?? samples[0];
-  const { track } = useSampleVoice(sample, voice);
+  const { take } = useSampleVoice(sample, voice);
   const clips = useSampleClips(sample, footage);
-  const plan = useMemo(() => samplePlan(sample, undefined, track, clips), [sample, track, clips]);
+  const plan = useMemo(() => samplePlan(sample, undefined, take, clips), [sample, take, clips]);
   return (
     <>
-      <VideoPreview key={`${track ? "v" : "s"}${clips ? "f" : ""}`} plan={plan} label={label} />
+      <VideoPreview key={`${take ? "v" : "s"}${clips ? "f" : ""}`} plan={plan} label={label} />
       {clips && <Credits clips={clips} />}
     </>
   );

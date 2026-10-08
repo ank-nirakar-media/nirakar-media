@@ -9,7 +9,7 @@ import { useSampleClips, useVoice } from "./useSampleVoice";
 
 // The narrated product walkthrough, played live in the browser. The phone inside it shows the dental
 // example with its footage; its own voice stays off so it doesn't talk over the narrator.
-export function WalkthroughPlayer({ voice, footage }: { voice: boolean; footage: boolean }) {
+export function WalkthroughPlayer({ voice, footage }: { voice: string | null; footage: boolean }) {
   const { track } = useVoice("walkthrough", walkScenes.length, voice);
   const clips = useSampleClips(samples[0], footage);
   const props: WalkProps = useMemo(

@@ -1,3 +1,4 @@
+import { loadVoiceSettings } from "@/lib/video/voice-settings";
 import { voiceLine } from "@/lib/video/voices";
 import { synthesize } from "@/lib/video/voice";
 
@@ -8,10 +9,11 @@ const memory = new Map<string, Buffer>();
 
 export async function GET(_req: Request, { params }: { params: Promise<{ sample: string; scene: string }> }) {
   const { sample, scene } = await params;
-  const line = /^\d+$/.test(scene) ? voiceLine(sample, Number(scene)) : undefined;
-  if (!line) return new Response("Not found", { status: 404 });
+  const part = scene === "full" ? "full" : /^\d+$/.test(scene) ? Number(scene) : undefined;
+  if (part === undefined || !voiceLine(sample, part)) return new Response("Not found", { status: 404 });
+  const line = voiceLine(sample, part, (await loadVoiceSettings())[sample])!;
 
-  const key = `${line.languageCode}|${line.speaker}|${line.text}`;
+  const key = `${line.model}|${line.languageCode}|${line.speaker}|${line.pace}|${line.text}`;
   let audio = memory.get(key);
   if (!audio) {
     const res = await synthesize(line);

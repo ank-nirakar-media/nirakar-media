@@ -261,3 +261,14 @@ CREATE TABLE IF NOT EXISTS sample_requests (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Voice chosen in Admin > Voices for each website voice source (an example video or the walkthrough).
+-- No row means the default voice in lib/video/samples.ts or lib/video/walkthrough.ts.
+CREATE TABLE IF NOT EXISTS voice_settings (
+  source      TEXT PRIMARY KEY,
+  model       TEXT NOT NULL,
+  speaker     TEXT NOT NULL,
+  pace        REAL NOT NULL DEFAULT 1,
+  updated_by  TEXT NOT NULL DEFAULT '',
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
