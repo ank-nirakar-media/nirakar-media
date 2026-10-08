@@ -5,7 +5,9 @@ import { one } from "../lib/db";
 import { brandColors, planFromScenes, safeColor } from "../lib/video/build";
 import { captionGroups, estimateSeconds, layoutFor, LAYOUTS, planFrames, sceneFrames, timeWords } from "../lib/video/plan";
 import { createSampleRequest, phoneKey, setSampleStatus } from "../lib/video/requests";
-import { samplePlan, samples, sampleVoiceUrl, WATERMARK } from "../lib/video/samples";
+import { samplePlan, samples, WATERMARK } from "../lib/video/samples";
+import { voiceLine, voiceUrl } from "../lib/video/voices";
+import { walkDurations, walkScenes } from "../lib/video/walkthrough";
 import { synthesize } from "../lib/video/voice";
 import { GET as sampleVoice } from "../app/api/sample-voice/[sample]/[scene]/route";
 
@@ -119,8 +121,12 @@ test("sample voice lines: never the business name, Devanagari for Hindi voices, 
       if (s.voice.languageCode === "hi-IN") assert.ok(!/[a-z]{3}/i.test(x.say), `${s.id}: Hindi voice line should be Devanagari: "${x.say}"`);
     }
   }
-  assert.match(sampleVoiceUrl(samples[0], 2), /^\/api\/sample-voice\/dental\/2\?v=[0-9a-z]+$/);
-  assert.notEqual(sampleVoiceUrl(samples[0], 0), sampleVoiceUrl(samples[0], 1));
+  assert.match(voiceUrl("dental", 2), /^\/api\/sample-voice\/dental\/2\?v=[0-9a-z]+$/);
+  assert.notEqual(voiceUrl("dental", 0), voiceUrl("dental", 1));
+  assert.deepEqual(voiceLine("cafe", 0), { text: samples[1].scenes[0].say, languageCode: "hi-IN", speaker: "shubh" });
+  assert.equal(voiceLine("walkthrough", 0)!.languageCode, "en-IN");
+  assert.equal(voiceLine("walkthrough", walkScenes.length), undefined);
+  assert.equal(voiceLine("nope", 0), undefined);
 });
 
 test("with voice, scenes last as long as the speech and carry the audio", () => {
@@ -181,4 +187,36 @@ test("sample voice route: only known lines, cached by the CDN, 503 when voice is
     globalThis.fetch = realFetch;
     delete process.env.SARVAM_API_KEY;
   }
+});
+
+test("walkthrough: every scene narrated, timed to the voice when it exists", () => {
+  assert.ok(walkScenes.every((s) => s.say.trim() && s.say.length < 300));
+  assert.equal(walkScenes.at(-1)!.id, "cta");
+  const est = walkDurations();
+  assert.equal(est.length, walkScenes.length);
+  assert.ok(est.every((d) => d >= 2.8));
+  assert.equal(walkDurations(walkScenes.map(() => 3))[0], 3.8);
+});
+
+test("footage: picks a vertical MP4 near 720 px, long enough, never the same clip twice", async () => {
+  const { pickClip, pickFile } = await import("../lib/video/footage");
+  const file = (width: number, height: number, type = "video/mp4") => ({ quality: "hd", file_type: type, width, height, link: `https://videos.pexels.com/${width}x${height}.mp4` });
+  assert.equal(pickFile([file(2160, 3840), file(1080, 1920), file(720, 1280), file(360, 640)])!.width, 720);
+  assert.equal(pickFile([file(1920, 1080), file(720, 1280, "video/webm")]), undefined, "landscape and non-MP4 files are skipped");
+  const video = (id: number, duration: number, files = [file(720, 1280)]) => ({ id, url: `https://www.pexels.com/video/${id}/`, duration, width: 1080, height: 1920, user: { name: `Creator ${id}` }, video_files: files });
+  const used = new Set([1]);
+  const clip = pickClip([video(1, 20), video(2, 3), video(3, 12)], 5, used);
+  assert.equal(clip!.id, 3);
+  assert.equal(clip!.credit, "Creator 3");
+  assert.equal(clip!.pageUrl, "https://www.pexels.com/video/3/");
+  assert.equal(pickClip([video(4, 30, [file(1920, 1080)])], 5, new Set()), undefined);
+});
+
+test("sample media route: 404 for unknown samples, 503 without a Pexels key", async () => {
+  const { GET } = await import("../app/api/sample-media/[sample]/route");
+  const call = (sample: string) => GET(new Request("http://x"), { params: Promise.resolve({ sample }) });
+  assert.equal((await call("nope")).status, 404);
+  delete process.env.PEXELS_API_KEY;
+  assert.equal((await call("dental")).status, 503);
+  assert.ok(samples.every((s) => s.scenes.every((x) => x.footage.trim())), "every scene has a search phrase");
 });

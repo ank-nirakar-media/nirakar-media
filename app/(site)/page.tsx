@@ -8,7 +8,8 @@ import { Languages } from "@/components/Languages";
 import { dashboardMetrics, faqs, highlights, stageCount, verticals, workflow } from "@/lib/content";
 import { HeroDashboard } from "@/components/HeroDashboard";
 import { ServiceIcon } from "@/components/ServiceIcon";
-import { SamplePlayer } from "@/components/SamplePlayer";
+import { WalkthroughPlayer } from "@/components/WalkthroughPlayer";
+import { footageConfigured } from "@/lib/video/footage";
 import { voiceConfigured } from "@/lib/video/voice";
 
 // Re-checked every minute so the founding-offer seat count stays current.
@@ -71,17 +72,17 @@ export default async function Home() {
       </section>
 
       <section className="section">
-        <div className="wrap video-teaser">
-          <div className="section-head" style={{ marginBottom: 0 }}>
-            <p className="eyebrow">Sample videos</p>
-            <h2>Watch the engine make a Short</h2>
-            <p className="lead">
-              Script, voice, footage and word-by-word captions in your brand colours, in Hindi, English, Hinglish and more. Try one with
-              your own business name, then ask for a free sample.
-            </p>
-            <div className="btn-row"><Link href="/sample-video" className="btn btn-primary">Try it with your business</Link><Link href="/sample-video#free-sample" className="btn btn-ghost">Get a free sample</Link></div>
+        <div className="wrap">
+          <div className="section-head section-head-row">
+            <div>
+              <p className="eyebrow">See it work</p>
+              <h2>From your business to a published video, and what it brought in</h2>
+              <p className="lead">Watch how one video is made, approved, published and tracked on your dashboard. Then try a sample with your own business name.</p>
+            </div>
+            <Link href="/sample-video" className="eyebrow link-arrow">Try it with your business →</Link>
           </div>
-          <SamplePlayer id="dental" voice={voiceConfigured()} label="Example video for a dental clinic" />
+          <WalkthroughPlayer voice={voiceConfigured()} footage={footageConfigured()} />
+          <div className="btn-row" style={{ marginTop: 24 }}><Link href="/sample-video" className="btn btn-primary">See sample videos</Link><Link href="/sample-video#free-sample" className="btn btn-ghost">Get a free sample</Link></div>
         </div>
       </section>
 

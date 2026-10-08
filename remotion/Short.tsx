@@ -1,5 +1,7 @@
+import { useState } from "react";
 import {
   AbsoluteFill,
+  getRemotionEnvironment,
   Audio,
   Img,
   interpolate,
@@ -70,11 +72,19 @@ function SceneView({ scene, index, brand, layout }: { scene: PlanScene; index: n
 
 function Background({ scene, index, brand }: { scene: PlanScene; index: number; brand: Brand }) {
   const frame = useCurrentFrame();
+  const [failed, setFailed] = useState(false);
   const total = sceneFrames(scene);
   const v = scene.visual;
   const cover = { width: "100%", height: "100%", objectFit: "cover" as const };
 
-  if (v.kind === "video") return <OffthreadVideo src={v.src} muted style={cover} />;
+  if (v.kind === "video" && !failed)
+    return (
+      <AbsoluteFill>
+        {/* In the browser a clip that won't load falls back to the brand gradient instead of breaking the player. */}
+        <OffthreadVideo src={v.src} muted style={cover} onError={getRemotionEnvironment().isRendering ? undefined : () => setFailed(true)} />
+        <AbsoluteFill style={{ background: "rgba(8,6,24,.25)" }} />
+      </AbsoluteFill>
+    );
   if (v.kind === "image") {
     // Slow push-in, alternating direction, so stills feel alive.
     const scale = interpolate(frame, [0, total], index % 2 ? [1.15, 1.02] : [1.02, 1.15]);

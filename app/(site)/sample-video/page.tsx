@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { SamplePlayer } from "@/components/SamplePlayer";
+import { WalkthroughPlayer } from "@/components/WalkthroughPlayer";
 import { VideoTry } from "@/components/VideoTry";
 import { samples } from "@/lib/video/samples";
+import { footageConfigured } from "@/lib/video/footage";
 import { voiceConfigured } from "@/lib/video/voice";
 import { SAMPLE_LANGUAGES } from "@/lib/video/requests";
 
@@ -23,6 +25,7 @@ type Search = { sent?: string; already?: string; error?: string };
 export default async function SampleVideoPage({ searchParams }: { searchParams: Promise<Search> }) {
   const { sent, already, error } = await searchParams;
   const voice = voiceConfigured();
+  const footage = footageConfigured();
   return (
     <>
       <section className="wrap page-hero">
@@ -30,16 +33,24 @@ export default async function SampleVideoPage({ searchParams }: { searchParams: 
         <h1>See what the <span className="grad-text">engine makes</span></h1>
         <p className="lead">
           These are made by the same engine that makes client videos. The businesses are examples. {voice
-            ? "Press play to hear the AI voice. Finished videos also get stock footage and music."
+            ? "Press play to hear them."
             : "Previews here play silently in your browser; finished videos come with voice, footage and music."}
         </p>
       </section>
 
       <section className="section-tight">
+        <div className="wrap">
+          <WalkthroughPlayer voice={voice} footage={footage} />
+          <p className="fine video-credit">How one video is made, approved, published and tracked. The dashboard in it shows example numbers.</p>
+        </div>
+      </section>
+
+      <section className="section-tight">
+        <div className="wrap section-head" style={{ marginBottom: 24 }}><h2>Example Shorts</h2></div>
         <div className="wrap video-gallery">
           {samples.map((s) => (
             <figure key={s.id} className="video-card">
-              <SamplePlayer id={s.id} voice={voice} label={`Example: ${s.niche} video in ${s.language}`} />
+              <SamplePlayer id={s.id} voice={voice} footage={footage} label={`Example: ${s.niche} video in ${s.language}`} />
               <figcaption><b>{s.niche}</b><span>{s.language}</span></figcaption>
             </figure>
           ))}
@@ -53,7 +64,7 @@ export default async function SampleVideoPage({ searchParams }: { searchParams: 
             <h2>Put your business in it</h2>
             <p className="lead">Type your business name and pick your colour. The video updates as you type.</p>
           </div>
-          <VideoTry voice={voice} />
+          <VideoTry voice={voice} footage={footage} />
         </div>
       </section>
 
