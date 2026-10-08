@@ -11,9 +11,9 @@ const before = new Date("2026-10-08T12:00:00+05:30");
 const after = new Date("2027-01-01T00:00:00+05:30");
 
 // The founding offer agreed with the owner on 2026-10-08. A change here must be deliberate.
-test("founding offer: 20 seats at ₹999 / ₹5,999 / ₹14,999 until 31 December 2026", () => {
+test("founding offer: 20 seats at ₹999 / ₹2,999 / ₹5,999 until 31 December 2026", () => {
   assert.equal(launchOffer.seats, 20);
-  assert.deepEqual(plans.map((p) => [p.id, launchOffer.priceInr[p.id]]), [["starter", 999], ["growth", 5999], ["pro", 14999]]);
+  assert.deepEqual(plans.map((p) => [p.id, launchOffer.priceInr[p.id]]), [["starter", 999], ["growth", 2999], ["pro", 5999]]);
   assert.equal(launchOffer.endsAt, "2026-12-31T23:59:59+05:30");
 });
 
@@ -27,9 +27,9 @@ test("the offer is open only while seats are left and before the end date", () =
 
 test("offer prices flow into the Razorpay plan name and amount", () => {
   const growth = getPlan("growth")!;
-  assert.equal(priceInr(growth, true), 5999);
+  assert.equal(priceInr(growth, true), 2999);
   assert.equal(priceInr(growth, false), 14999);
-  assert.equal(planAmountInr(growth, 1, true), 5999 + 2499);
+  assert.equal(planAmountInr(growth, 1, true), 2999 + 2499);
   assert.equal(planAmountInr(growth, 1, false), 14999 + 2499);
   assert.equal(planName(growth, 0, true), "Nirakar Media Growth (founding offer)");
   assert.equal(planName(growth, 0, false), "Nirakar Media Growth");
@@ -67,7 +67,7 @@ test("the offer closes when all 20 seats are taken", async () => {
 
 test("Ask Purple knows the offer before the end date and drops it after", () => {
   const open = knowledgePack(before);
-  assert.ok(open.includes("Founding offer: ₹5,999 a month instead of ₹14,999."));
+  assert.ok(open.includes("Founding offer: ₹2,999 a month instead of ₹14,999."));
   assert.ok(open.includes("31 December 2026"));
   const closed = knowledgePack(after);
   assert.ok(!closed.includes("Founding offer"));

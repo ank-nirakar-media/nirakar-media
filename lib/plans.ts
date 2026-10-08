@@ -87,7 +87,7 @@ export const launchOffer = {
   seats: 20,
   endsAt: "2026-12-31T23:59:59+05:30",
   endsLabel: "31 December 2026",
-  priceInr: { starter: 999, growth: 5999, pro: 14999 } as Record<PlanId, number>,
+  priceInr: { starter: 999, growth: 2999, pro: 5999 } as Record<PlanId, number>,
 };
 
 export function offerOpen(seatsTaken: number, now = new Date()): boolean {
