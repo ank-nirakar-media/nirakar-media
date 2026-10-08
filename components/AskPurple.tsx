@@ -8,6 +8,9 @@ type Checkout = { plan: string; name: string; price: string };
 type Msg = { role: "user" | "assistant"; text: string; checkout?: Checkout };
 
 const STORE = "ask-purple";
+// A saved chat survives refreshes and link clicks, but not a long break: after 30 minutes
+// without a message the next page load starts a fresh chat.
+const IDLE_MS = 30 * 60 * 1000;
 const GREETING = "Hi, I'm Ask Purple. Ask me about our plans, languages, or how the content engine works.";
 const STARTERS = ["Which plan fits my business?", "Do you make videos in Hindi?", "How does it work?"];
 
@@ -24,9 +27,12 @@ function Linked({ text }: { text: string }) {
   );
 }
 
-function load(): { id?: string; msgs: Msg[] } {
+type Saved = { id?: string; msgs: Msg[]; at?: number };
+
+function load(now = Date.now()): Saved {
   try {
-    return JSON.parse(sessionStorage.getItem(STORE) || "") as { id?: string; msgs: Msg[] };
+    const saved = JSON.parse(sessionStorage.getItem(STORE) || "") as Saved;
+    return saved.at && now - saved.at < IDLE_MS ? saved : { msgs: [] };
   } catch {
     return { msgs: [] };
   }
@@ -48,10 +54,18 @@ export function AskPurple() {
 
   useEffect(() => {
     try {
-      sessionStorage.setItem(STORE, JSON.stringify({ id, msgs }));
+      if (msgs.length) sessionStorage.setItem(STORE, JSON.stringify({ id, msgs, at: Date.now() }));
+      else sessionStorage.removeItem(STORE);
     } catch {}
     end.current?.scrollIntoView({ block: "end" });
   }, [id, msgs, open]);
+
+  // Starts a new conversation; the old one stays in Admin > Chats.
+  function newChat() {
+    setId(undefined);
+    setMsgs([]);
+    setText("");
+  }
 
   async function send(message: string) {
     const m = message.trim();
@@ -87,6 +101,9 @@ export function AskPurple() {
               <b>Ask Purple</b>
               <span className="fine">AI assistant for Nirakar Media</span>
             </div>
+            {msgs.length > 0 && (
+              <button type="button" className="ask-new" onClick={newChat} disabled={busy}>New chat</button>
+            )}
             <button type="button" className="ask-close" aria-label="Close chat" onClick={() => setOpen(false)}>×</button>
           </header>
           <div className="ask-body" aria-live="polite">
