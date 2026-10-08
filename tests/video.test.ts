@@ -200,23 +200,52 @@ test("walkthrough: every scene narrated, timed to the voice when it exists", () 
 
 test("footage: picks a vertical MP4 near 720 px, long enough, never the same clip twice", async () => {
   const { pickClip, pickFile } = await import("../lib/video/footage");
-  const file = (width: number, height: number, type = "video/mp4") => ({ quality: "hd", file_type: type, width, height, link: `https://videos.pexels.com/${width}x${height}.mp4` });
+  const file = (width: number, height: number, type = "video/mp4") => ({ width, height, type, link: `https://cdn.example.com/${width}x${height}.mp4` });
   assert.equal(pickFile([file(2160, 3840), file(1080, 1920), file(720, 1280), file(360, 640)])!.width, 720);
-  assert.equal(pickFile([file(1920, 1080), file(720, 1280, "video/webm")]), undefined, "landscape and non-MP4 files are skipped");
-  const video = (id: number, duration: number, files = [file(720, 1280)]) => ({ id, url: `https://www.pexels.com/video/${id}/`, duration, width: 1080, height: 1920, user: { name: `Creator ${id}` }, video_files: files });
-  const used = new Set([1]);
-  const clip = pickClip([video(1, 20), video(2, 3), video(3, 12)], 5, used);
-  assert.equal(clip!.id, 3);
-  assert.equal(clip!.credit, "Creator 3");
-  assert.equal(clip!.pageUrl, "https://www.pexels.com/video/3/");
-  assert.equal(pickClip([video(4, 30, [file(1920, 1080)])], 5, new Set()), undefined);
+  assert.equal(pickFile([file(1920, 1080), file(720, 1280, "video/webm")]), undefined, "landscape and non-MP4 files are skipped by default");
+  assert.equal(pickFile([file(3840, 2160), file(1920, 1080), file(1280, 720)], true)!.height, 1080, "landscape fallback prefers 1080p");
+  const cand = (id: number, duration: number, files = [file(720, 1280)]) => ({ id, duration, credit: `Creator ${id}`, pageUrl: `https://pixabay.com/videos/${id}/`, source: "Pixabay" as const, files });
+  const clip = pickClip([cand(1, 20), cand(2, 3), cand(3, 12)], 5, new Set([1]));
+  assert.deepEqual(clip, { id: 3, src: "https://cdn.example.com/720x1280.mp4", credit: "Creator 3", pageUrl: "https://pixabay.com/videos/3/", source: "Pixabay" });
+  const wideOnly = pickClip([cand(4, 30, [file(1920, 1080)]), cand(5, 30, [file(1280, 720)])], 5, new Set());
+  assert.equal(wideOnly!.id, 4, "with no vertical clip, a landscape one is used");
+  const vertLater = pickClip([cand(6, 30, [file(1920, 1080)]), cand(7, 30)], 5, new Set());
+  assert.equal(vertLater!.id, 7, "a vertical clip anywhere in the results beats a landscape one");
 });
 
-test("sample media route: 404 for unknown samples, 503 without a Pexels key", async () => {
+test("footage search: Pexels first, else Pixabay, both normalised", async () => {
+  const { searchFootage, footageProvider } = await import("../lib/video/footage");
+  const realFetch = globalThis.fetch;
+  const urls: string[] = [];
+  globalThis.fetch = (async (url: string) => {
+    urls.push(url);
+    if (url.startsWith("https://api.pexels.com/")) return new Response(JSON.stringify({ videos: [{ id: 9, url: "https://www.pexels.com/video/9/", duration: 10, user: { name: "Asha" }, video_files: [{ file_type: "video/mp4", width: 720, height: 1280, link: "https://videos.pexels.com/9.mp4" }] }] }));
+    return new Response(JSON.stringify({ hits: [{ id: 8, pageURL: "https://pixabay.com/videos/8/", duration: 12, user: "ravi", videos: { large: { url: "", width: 0, height: 0 }, medium: { url: "https://cdn.pixabay.com/8.mp4", width: 1280, height: 720 } } }] }));
+  }) as unknown as typeof fetch;
+  try {
+    delete process.env.PEXELS_API_KEY; delete process.env.PIXABAY_API_KEY;
+    assert.equal(footageProvider(), null);
+    await assert.rejects(searchFootage("tea"));
+    process.env.PIXABAY_API_KEY = "pb";
+    const pb = await searchFootage("masala chai");
+    assert.match(urls.at(-1)!, /^https:\/\/pixabay\.com\/api\/videos\/\?key=pb&q=masala\+chai/);
+    assert.deepEqual(pb[0].files, [{ width: 1280, height: 720, link: "https://cdn.pixabay.com/8.mp4", type: "video/mp4" }]);
+    assert.equal(pb[0].source, "Pixabay");
+    process.env.PEXELS_API_KEY = "px";
+    const px = await searchFootage("tea");
+    assert.match(urls.at(-1)!, /^https:\/\/api\.pexels\.com\/v1\/videos\/search\?query=tea&orientation=portrait/);
+    assert.equal(px[0].credit, "Asha");
+  } finally {
+    globalThis.fetch = realFetch;
+    delete process.env.PEXELS_API_KEY; delete process.env.PIXABAY_API_KEY;
+  }
+});
+
+test("sample media route: 404 for unknown samples, 503 without a footage key", async () => {
   const { GET } = await import("../app/api/sample-media/[sample]/route");
   const call = (sample: string) => GET(new Request("http://x"), { params: Promise.resolve({ sample }) });
   assert.equal((await call("nope")).status, 404);
-  delete process.env.PEXELS_API_KEY;
+  delete process.env.PEXELS_API_KEY; delete process.env.PIXABAY_API_KEY;
   assert.equal((await call("dental")).status, 503);
   assert.ok(samples.every((s) => s.scenes.every((x) => x.footage.trim())), "every scene has a search phrase");
 });

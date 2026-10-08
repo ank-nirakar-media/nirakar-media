@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { samplePlan, samples } from "@/lib/video/samples";
+import { samplePlan, samples, type SampleClip } from "@/lib/video/samples";
 import { useSampleClips, useSampleVoice } from "./useSampleVoice";
 import { VideoPreview } from "./VideoPreview";
 
@@ -19,12 +19,15 @@ export function SamplePlayer({ id, voice, footage, label }: { id: string; voice:
   );
 }
 
-export function Credits({ clips }: { clips: ({ credit: string; pageUrl: string } | null)[] }) {
-  const people = [...new Map(clips.filter(Boolean).map((c) => [c!.credit, c!])).values()];
+const sites = { Pexels: "https://www.pexels.com", Pixabay: "https://pixabay.com" };
+
+export function Credits({ clips }: { clips: SampleClip[] }) {
+  const people = [...new Map(clips.filter((c): c is NonNullable<SampleClip> => Boolean(c)).map((c) => [c.credit, c])).values()];
+  const source = people[0]?.source ?? "Pexels";
   return (
     <p className="fine video-credit">
       Footage: {people.map((c, i) => <span key={c.pageUrl}>{i ? ", " : ""}<a href={c.pageUrl} target="_blank" rel="noopener noreferrer">{c.credit}</a></span>)} on{" "}
-      <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer">Pexels</a>
+      <a href={sites[source]} target="_blank" rel="noopener noreferrer">{source}</a>
     </p>
   );
 }

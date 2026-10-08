@@ -59,7 +59,7 @@ export const WATERMARK = "Sample by Nirakar Media";
 // Real voice lengths per scene, in seconds, once the voice files have loaded in the browser.
 export type VoiceTrack = { src: string; seconds: number }[];
 // Background clips per scene, from /api/sample-media. A missing clip falls back to the brand gradient.
-export type SampleClip = { src: string; credit: string; pageUrl: string } | null;
+export type SampleClip = { src: string; credit: string; pageUrl: string; source: "Pexels" | "Pixabay" } | null;
 
 export function samplePlan(s: Sample, brand?: Brand, voice?: VoiceTrack, clips?: SampleClip[]): VideoPlan {
   const b = brand ?? s.brand;
@@ -67,7 +67,7 @@ export function samplePlan(s: Sample, brand?: Brand, voice?: VoiceTrack, clips?:
     voiceover: x.voiceover,
     on_screen_text: brand ? x.on_screen_text.replaceAll(s.brand.name, b.name) : x.on_screen_text,
     ...(voice?.[i] ? { audioSrc: voice[i].src, audioSec: voice[i].seconds + 0.35 } : {}),
-    ...(clips?.[i] ? { media: { kind: "video" as const, src: clips[i]!.src, credit: clips[i]!.credit, license: "Pexels License" } } : {}),
+    ...(clips?.[i] ? { media: { kind: "video" as const, src: clips[i]!.src, credit: clips[i]!.credit, license: `${clips[i]!.source} License` } } : {}),
   }));
   return planFromScenes({ scenes, brand: b, language: s.language, layout: s.layout, watermark: WATERMARK });
 }

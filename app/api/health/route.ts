@@ -40,7 +40,7 @@ export async function GET() {
     youtube: process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? "set" : "not yet",
     instagram: process.env.META_APP_ID && process.env.META_APP_SECRET ? "set" : "not yet",
     voice: process.env.SARVAM_API_KEY ? "set" : "not yet",
-    footage: process.env.PEXELS_API_KEY ? "set" : "not yet",
+    footage: process.env.PEXELS_API_KEY ? "pexels" : process.env.PIXABAY_API_KEY ? "pixabay" : "not yet",
     email: process.env.RESEND_API_KEY ? "set" : "missing",
     emailFrom: emailFrom(),
     contactWebhook: set("CONTACT_WEBHOOK_URL"),
