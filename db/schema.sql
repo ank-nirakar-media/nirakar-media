@@ -243,3 +243,21 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Free sample video requests from the website. Ankit approves each one before anything is made.
+-- phone_key is the phone number reduced to its last 10 digits, so one business gets one free sample.
+CREATE TABLE IF NOT EXISTS sample_requests (
+  id          SERIAL PRIMARY KEY,
+  name        TEXT NOT NULL,
+  business    TEXT NOT NULL,
+  email       TEXT NOT NULL,
+  phone       TEXT NOT NULL,
+  phone_key   TEXT NOT NULL UNIQUE,
+  niche       TEXT NOT NULL DEFAULT '',
+  language    TEXT NOT NULL DEFAULT '',
+  topic       TEXT NOT NULL DEFAULT '',
+  status      TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'approved', 'declined', 'sent')),
+  note        TEXT NOT NULL DEFAULT '',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);

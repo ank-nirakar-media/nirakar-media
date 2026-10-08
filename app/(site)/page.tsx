@@ -8,6 +8,9 @@ import { Languages } from "@/components/Languages";
 import { dashboardMetrics, faqs, highlights, stageCount, verticals, workflow } from "@/lib/content";
 import { HeroDashboard } from "@/components/HeroDashboard";
 import { ServiceIcon } from "@/components/ServiceIcon";
+import { WalkthroughPlayer } from "@/components/WalkthroughPlayer";
+import { footageConfigured } from "@/lib/video/footage";
+import { voiceConfigured } from "@/lib/video/voice";
 
 // Re-checked every minute so the founding-offer seat count stays current.
 export const revalidate = 60;
@@ -65,6 +68,21 @@ export default async function Home() {
               <li key={h.title}><ServiceIcon slug={h.icon} /><div><b>{h.title}</b><span>{h.text}</span></div></li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="wrap">
+          <div className="section-head section-head-row">
+            <div>
+              <p className="eyebrow">See it work</p>
+              <h2>From your business to a published video, and what it brought in</h2>
+              <p className="lead">Watch how one video is made, approved, published and tracked on your dashboard. Then try a sample with your own business name.</p>
+            </div>
+            <Link href="/sample-video" className="eyebrow link-arrow">Try it with your business →</Link>
+          </div>
+          <WalkthroughPlayer voice={voiceConfigured()} footage={footageConfigured()} />
+          <div className="btn-row" style={{ marginTop: 24 }}><Link href="/sample-video" className="btn btn-primary">See sample videos</Link><Link href="/sample-video#free-sample" className="btn btn-ghost">Get a free sample</Link></div>
         </div>
       </section>
 

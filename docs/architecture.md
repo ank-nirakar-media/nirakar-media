@@ -66,6 +66,14 @@ for schema-checked JSON and logs every call with its cost to `ai_runs`. `lib/ai/
 Everything AI makes is a draft for the team; nothing reaches a client until it is sent for approval. Admin > AI
 shows status, monthly cost and the call log. Voiceover, visuals and video rendering are the next part of this layer.
 
+**Video engine.** A scene plan becomes a `VideoPlan` (`lib/video/plan.ts`, `lib/video/build.ts`): scenes,
+caption word timings, brand colours, layout. One Remotion composition (`remotion/Short.tsx`) draws it, both
+in the browser (Remotion Player, for the website demo and the admin preview) and as an MP4
+(`npx tsx scripts/render.ts [plan.json] [out.mp4] [--stills]`). Fonts are Baloo 2 in `public/fonts`
+(Latin and Devanagari). Captions are timed from the script and the audio length, because the planned
+voice provider returns no word timestamps. Free sample requests from `/sample-video` land in
+`sample_requests` and wait in Admin > Samples for a person to approve them.
+
 ## 6. Human review / operations
 
 **Partial.** The admin console is the team's workspace today: publishing opportunities, tagging videos and
@@ -90,7 +98,8 @@ managing links, plus the content pipeline board. Separate editor and QA logins c
 | Payment gateway | Built | Razorpay Subscriptions (Stripe is invite-only in India) |
 | Email / WhatsApp / Slack | Partial | One outbound webhook |
 | Claude API | Built | Ideas, scripts, scene plans, captions |
-| Voice API, stock footage, video rendering | Later | Next step of the AI Studio |
+| Video engine: layouts, captions, browser preview, website demo, sample requests | Built | `lib/video/`, `remotion/`, `/sample-video`, `/admin/samples` |
+| Voice API, stock footage, MP4 rendering job | Later | Needs Sarvam and Pexels keys and a renderer choice |
 | CRM (HubSpot etc.), CMS (WordPress etc.) | Later | |
 
 ## 9. Platform ops
