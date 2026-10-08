@@ -8,6 +8,8 @@ import { Languages } from "@/components/Languages";
 import { dashboardMetrics, faqs, highlights, stageCount, verticals, workflow } from "@/lib/content";
 import { HeroDashboard } from "@/components/HeroDashboard";
 import { ServiceIcon } from "@/components/ServiceIcon";
+import { VideoPreview } from "@/components/VideoPreview";
+import { samplePlan, samples } from "@/lib/video/samples";
 
 // Re-checked every minute so the founding-offer seat count stays current.
 export const revalidate = 60;
@@ -65,6 +67,21 @@ export default async function Home() {
               <li key={h.title}><ServiceIcon slug={h.icon} /><div><b>{h.title}</b><span>{h.text}</span></div></li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="wrap video-teaser">
+          <div className="section-head" style={{ marginBottom: 0 }}>
+            <p className="eyebrow">Sample videos</p>
+            <h2>Watch the engine make a Short</h2>
+            <p className="lead">
+              Script, voice, footage and word-by-word captions in your brand colours, in Hindi, English, Hinglish and more. Try one with
+              your own business name, then ask for a free sample.
+            </p>
+            <div className="btn-row"><Link href="/sample-video" className="btn btn-primary">Try it with your business</Link><Link href="/sample-video#free-sample" className="btn btn-ghost">Get a free sample</Link></div>
+          </div>
+          <VideoPreview plan={samplePlan(samples[0])} label="Example video for a dental clinic" />
         </div>
       </section>
 

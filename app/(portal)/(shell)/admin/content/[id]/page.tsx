@@ -6,6 +6,9 @@ import { requireAdmin } from "@/lib/auth";
 import { autoApproveAt, formatTime, formats, getItem, listEvents, platforms, reviewLabel, stages } from "@/lib/pipeline";
 import { aiConfigured } from "@/lib/ai/claude";
 import { loadScenes } from "@/lib/ai/studio";
+import { VideoPreview } from "@/components/VideoPreview";
+import { loadBrand } from "@/lib/brand";
+import { brandColors, planFromScenes } from "@/lib/video/build";
 import { aiDraftScript } from "../../../../ai-actions";
 import { addItemMessage, deleteItem, sendItemForReview, updateItem } from "../../../../pipeline-actions";
 
@@ -23,6 +26,7 @@ export default async function AdminItem({ params, searchParams }: { params: Prom
   const due = autoApproveAt(item);
   const scenes = await loadScenes(item.id);
   const ai = aiConfigured();
+  const preview = scenes.length && item.format !== "long" ? await previewPlan(item, scenes) : null;
 
   return (
     <section className="wrap section-tight stack" style={{ gap: 22, maxWidth: 900 }}>
@@ -151,6 +155,14 @@ export default async function AdminItem({ params, searchParams }: { params: Prom
         <div className="btn-row"><button className="btn btn-primary btn-sm" type="submit">Save</button></div>
       </form>
 
+      {preview && (
+        <details className="card scene-plan" id="video-preview">
+          <summary>Video preview from the scene plan (silent, brand colours from the Brand Brain)</summary>
+          <p className="fine">Built by the video engine from the AI scene plan. Voice and stock footage are added when the video is rendered. Only you see this.</p>
+          <div style={{ maxWidth: 320 }}><VideoPreview plan={preview} label={`Preview of ${item.title}`} /></div>
+        </details>
+      )}
+
       <div className="card form" id="history">
         <h3>History and messages</h3>
         <form action={addItemMessage} className="form">
@@ -181,4 +193,10 @@ export default async function AdminItem({ params, searchParams }: { params: Prom
       </details>
     </section>
   );
+}
+
+async function previewPlan(item: { id: number; client_id: number; client_name: string; language: string }, scenes: Awaited<ReturnType<typeof loadScenes>>) {
+  const brand = await loadBrand(item.client_id, "");
+  const colors = brandColors(String(brand.data.colors_fonts ?? ""));
+  return planFromScenes({ scenes: scenes.map(({ voiceover, on_screen_text }) => ({ voiceover, on_screen_text })), brand: { name: item.client_name, ...colors }, language: item.language || "English", seed: item.id });
 }
