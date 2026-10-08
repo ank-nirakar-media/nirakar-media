@@ -9,13 +9,13 @@ import { VideoPreview } from "./VideoPreview";
 
 // "Try it with your business": swaps the visitor's name, handle and colour into an example video, live,
 // in their browser. Nothing is sent to us and nothing is generated on a server.
-export function VideoTry({ voice, footage }: { voice: boolean; footage: boolean }) {
+export function VideoTry({ voice, footage }: { voice: string | null; footage: boolean }) {
   const [sampleId, setSampleId] = useState(samples[0].id);
   const [name, setName] = useState("");
   const [handle, setHandle] = useState("");
   const [color, setColor] = useState("#8B5CF6");
   const sample = samples.find((s) => s.id === sampleId) ?? samples[0];
-  const { track, state } = useSampleVoice(sample, voice);
+  const { take, state } = useSampleVoice(sample, voice);
   const clips = useSampleClips(sample, footage);
 
   const plan = useMemo(() => {
@@ -26,8 +26,8 @@ export function VideoTry({ voice, footage }: { voice: boolean; footage: boolean 
       primary,
       accent: sample.brand.accent,
     };
-    return samplePlan(sample, brand, track, clips);
-  }, [sample, name, handle, color, track, clips]);
+    return samplePlan(sample, brand, take, clips);
+  }, [sample, name, handle, color, take, clips]);
 
   return (
     <div className="video-try">
@@ -57,7 +57,7 @@ export function VideoTry({ voice, footage }: { voice: boolean; footage: boolean 
         </p>
       </div>
       <div>
-        <VideoPreview key={`${sample.id}-${track ? "v" : "s"}${clips ? "f" : ""}`} plan={plan} label={`Example video for ${plan.brand.name}`} />
+        <VideoPreview key={`${sample.id}-${take ? "v" : "s"}${clips ? "f" : ""}`} plan={plan} label={`Example video for ${plan.brand.name}`} />
         {clips && <Credits clips={clips} />}
       </div>
     </div>

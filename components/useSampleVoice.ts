@@ -1,30 +1,45 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Sample, SampleClip, VoiceTrack } from "@/lib/video/samples";
+import type { Sample, SampleClip, VoiceTake, VoiceTrack } from "@/lib/video/samples";
 import { voiceUrl } from "@/lib/video/voices";
 
 // Loads the voice for each scene of an example video and reads its length, so scenes and captions
 // match the real speech. Until every file is in (or if voice isn't set up), the preview stays silent.
-export function useSampleVoice(sample: Pick<Sample, "id" | "scenes">, enabled: boolean): { track?: VoiceTrack; state: "off" | "loading" | "ready" | "failed" } {
-  return useVoice(sample.id, sample.scenes.length, enabled);
+// The whole example video read in one take. voiceKey: null when voice is off, otherwise the
+// current voice-settings key from the server (a new key means a new voice, so a new URL).
+export function useSampleVoice(sample: Pick<Sample, "id">, voiceKey: string | null): { take?: VoiceTake; state: "off" | "loading" | "ready" | "failed" } {
+  const [result, setResult] = useState<{ id: string; take?: VoiceTake }>();
+  const id = `${sample.id}|${voiceKey}`;
+  useEffect(() => {
+    if (voiceKey === null) return;
+    let live = true;
+    duration(voiceUrl(sample.id, "full", voiceKey))
+      .then((take) => live && setResult({ id, take }))
+      .catch(() => live && setResult({ id }));
+    return () => { live = false; };
+  }, [sample.id, voiceKey, id]);
+  if (voiceKey === null) return { state: "off" };
+  if (result?.id !== id) return { state: "loading" };
+  return result.take ? { take: result.take, state: "ready" } : { state: "failed" };
 }
 
 // Same, for any fixed voice source (an example video or "walkthrough") with n lines.
-export function useVoice(source: string, n: number, enabled: boolean): { track?: VoiceTrack; state: "off" | "loading" | "ready" | "failed" } {
+export function useVoice(source: string, n: number, voiceKey: string | null): { track?: VoiceTrack; state: "off" | "loading" | "ready" | "failed" } {
   const [result, setResult] = useState<{ id: string; track?: VoiceTrack; failed?: boolean }>();
 
   useEffect(() => {
-    if (!enabled) return;
+    if (voiceKey === null) return;
     let live = true;
-    Promise.all(Array.from({ length: n }, (_, i) => duration(voiceUrl(source, i))))
-      .then((track) => live && setResult({ id: source, track }))
-      .catch(() => live && setResult({ id: source, failed: true }));
+    const id = `${source}|${voiceKey}`;
+    Promise.all(Array.from({ length: n }, (_, i) => duration(voiceUrl(source, i, voiceKey))))
+      .then((track) => live && setResult({ id, track }))
+      .catch(() => live && setResult({ id, failed: true }));
     return () => { live = false; };
-  }, [source, n, enabled]);
+  }, [source, n, voiceKey]);
 
-  if (!enabled) return { state: "off" };
-  if (result?.id !== source) return { state: "loading" };
+  if (voiceKey === null) return { state: "off" };
+  if (result?.id !== `${source}|${voiceKey}`) return { state: "loading" };
   return result.track ? { track: result.track, state: "ready" } : { state: "failed" };
 }
 

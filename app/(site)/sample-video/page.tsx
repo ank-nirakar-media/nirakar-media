@@ -5,6 +5,7 @@ import { VideoTry } from "@/components/VideoTry";
 import { samples } from "@/lib/video/samples";
 import { footageConfigured } from "@/lib/video/footage";
 import { voiceConfigured } from "@/lib/video/voice";
+import { loadVoiceSettings, settingsKey } from "@/lib/video/voice-settings";
 import { SAMPLE_LANGUAGES } from "@/lib/video/requests";
 
 export const metadata: Metadata = {
@@ -24,7 +25,7 @@ type Search = { sent?: string; already?: string; error?: string };
 
 export default async function SampleVideoPage({ searchParams }: { searchParams: Promise<Search> }) {
   const { sent, already, error } = await searchParams;
-  const voice = voiceConfigured();
+  const voice = voiceConfigured() ? settingsKey(await loadVoiceSettings()) : null;
   const footage = footageConfigured();
   return (
     <>

@@ -32,6 +32,7 @@ export type VideoPlan = {
   brand: Brand;
   scenes: PlanScene[];
   music?: { src: string; volume: number; credit: string; license: string };
+  voiceover?: { src: string }; // one continuous take for the whole video (scenes then carry no audioSrc)
   watermark?: string; // shown across demo samples, empty for client videos
 };
 
@@ -82,6 +83,14 @@ export function captionGroups(words: Word[], maxWords = 3, maxChars = 16): Word[
   }
   if (cur.length) groups.push(cur);
   return groups;
+}
+
+// Splits one continuous voice take across scenes in proportion to how much each scene says (letters,
+// plus a beat for sentence-ending punctuation), so scene changes land near the real pauses.
+export function splitTake(lines: string[], seconds: number): number[] {
+  const weight = (t: string) => Math.max(1, [...t.replace(/[^\p{L}\p{N}]/gu, "")].length) + (t.match(/[.!?।]/g)?.length ?? 0) * 4;
+  const total = lines.reduce((n, l) => n + weight(l), 0);
+  return lines.map((l) => Math.round((weight(l) / total) * seconds * 100) / 100);
 }
 
 // Spoken length estimate for a line when no audio exists yet (previews, tests): about 2.6 words a second.

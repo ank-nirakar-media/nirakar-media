@@ -3,9 +3,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { one } from "../lib/db";
 import { brandColors, planFromScenes, safeColor } from "../lib/video/build";
-import { captionGroups, estimateSeconds, layoutFor, LAYOUTS, planFrames, sceneFrames, timeWords } from "../lib/video/plan";
+import { captionGroups, estimateSeconds, layoutFor, LAYOUTS, planFrames, sceneFrames, splitTake, timeWords } from "../lib/video/plan";
+import { loadVoiceSettings, resetVoiceChoice, saveVoiceChoice, settingsKey } from "../lib/video/voice-settings";
 import { createSampleRequest, phoneKey, setSampleStatus } from "../lib/video/requests";
-import { samplePlan, samples, WATERMARK } from "../lib/video/samples";
+import { fullSay, samplePlan, samples, WATERMARK } from "../lib/video/samples";
 import { voiceLine, voiceUrl } from "../lib/video/voices";
 import { walkDurations, walkScenes } from "../lib/video/walkthrough";
 import { synthesize } from "../lib/video/voice";
@@ -121,20 +122,53 @@ test("sample voice lines: never the business name, Devanagari for Hindi voices, 
       if (s.voice.languageCode === "hi-IN") assert.ok(!/[a-z]{3}/i.test(x.say), `${s.id}: Hindi voice line should be Devanagari: "${x.say}"`);
     }
   }
-  assert.match(voiceUrl("dental", 2), /^\/api\/sample-voice\/dental\/2\?v=[0-9a-z]+$/);
+  assert.match(voiceUrl("dental", 2), /^\/api\/sample-voice\/dental\/2\?v=[0-9a-z]+&s=d$/);
   assert.notEqual(voiceUrl("dental", 0), voiceUrl("dental", 1));
-  assert.deepEqual(voiceLine("cafe", 0), { text: samples[1].scenes[0].say, languageCode: "hi-IN", speaker: "shubh" });
+  assert.deepEqual(voiceLine("cafe", 0), { text: samples[1].scenes[0].say, languageCode: "hi-IN", speaker: "shubh", model: undefined, pace: undefined });
+  // Example Shorts are read in one take; the walkthrough has no single take.
+  assert.equal(voiceLine("dental", "full")!.text, fullSay(samples[0]));
+  assert.ok(samples[0].scenes.every((x) => fullSay(samples[0]).includes(x.say.trim())));
+  assert.ok(fullSay(samples[0]).length <= 2500);
+  assert.equal(voiceLine("walkthrough", "full"), undefined);
+  assert.match(voiceUrl("dental", "full", "abc"), /^\/api\/sample-voice\/dental\/full\?v=[0-9a-z]+&s=abc$/);
+  assert.deepEqual(voiceLine("dental", "full", { model: "bulbul:v3", speaker: "anand", pace: 0.9 })!.speaker, "anand");
   assert.equal(voiceLine("walkthrough", 0)!.languageCode, "en-IN");
   assert.equal(voiceLine("walkthrough", walkScenes.length), undefined);
   assert.equal(voiceLine("nope", 0), undefined);
 });
 
-test("with voice, scenes last as long as the speech and carry the audio", () => {
-  const track = samples[0].scenes.map((_, i) => ({ src: `/v/${i}.mp3`, seconds: 2 + i }));
-  const plan = samplePlan(samples[0], undefined, track);
-  assert.deepEqual(plan.scenes.map((x) => x.durationSec), [2.35, 3.35, 4.35, 5.35]);
-  assert.equal(plan.scenes[3].audioSrc, "/v/3.mp3");
-  assert.ok(plan.scenes[3].words.at(-1)!.end <= 5.35);
+test("with voice, one take is split across the scenes by what each one says", () => {
+  const plan = samplePlan(samples[0], undefined, { src: "/v/full.mp3", seconds: 12 });
+  assert.equal(plan.voiceover?.src, "/v/full.mp3");
+  assert.ok(plan.scenes.every((x) => !x.audioSrc), "no per-scene audio when there is one take");
+  const total = plan.scenes.reduce((n, x) => n + x.durationSec, 0);
+  assert.ok(Math.abs(total - 12.6) < 0.3, `scenes add up to the take plus a short tail, got ${total}`);
+  for (const x of plan.scenes) assert.ok(x.words.at(-1)!.end <= x.durationSec + 0.001);
+  assert.equal(samplePlan(samples[0]).voiceover, undefined);
+});
+
+test("splitTake: longer lines get more time, sentence ends get a pause, total is kept", () => {
+  const parts = splitTake(["छोटा", "यह एक बहुत लंबी लाइन है जो ज़्यादा समय लेगी।"], 10);
+  assert.ok(parts[1] > parts[0] * 3);
+  assert.ok(Math.abs(parts[0] + parts[1] - 10) < 0.02);
+  assert.deepEqual(splitTake(["a", "b"], 4), [2, 2]);
+});
+
+test("voice choices: admin picks are validated, change the URL key, and reset to default", async () => {
+  assert.equal(settingsKey({}), "d");
+  assert.deepEqual(await loadVoiceSettings(), {});
+  assert.equal(await saveVoiceChoice("nope", { model: "bulbul:v3", speaker: "anand", pace: 1 }, "t"), false);
+  assert.equal(await saveVoiceChoice("dental", { model: "gpt-voice", speaker: "anand", pace: 1 }, "t"), false);
+  assert.equal(await saveVoiceChoice("dental", { model: "bulbul:v3", speaker: "x'; DROP", pace: 1 }, "t"), false);
+  assert.equal(await saveVoiceChoice("dental", { model: "bulbul:v4-flash", speaker: "shubh_enhi_ads", pace: 9 }, "t"), true);
+  const s = await loadVoiceSettings();
+  assert.deepEqual(s.dental, { model: "bulbul:v4-flash", speaker: "shubh_enhi_ads", pace: 2 }, "pace is clamped to Sarvam's range");
+  const key = settingsKey(s);
+  assert.notEqual(key, "d");
+  await saveVoiceChoice("dental", { model: "bulbul:v4-flash", speaker: "shubh_enhi_ads", pace: 1.1 }, "t");
+  assert.notEqual(settingsKey(await loadVoiceSettings()), key);
+  await resetVoiceChoice("dental");
+  assert.equal(settingsKey(await loadVoiceSettings()), "d");
 });
 
 test("Sarvam request matches the documented API, and the key never leaves the header", async () => {
@@ -169,6 +203,7 @@ test("sample voice route: only known lines, cached by the CDN, 503 when voice is
   assert.equal((await call("nope", "0")).status, 404);
   assert.equal((await call("dental", "9")).status, 404);
   assert.equal((await call("dental", "1abc")).status, 404);
+  assert.equal((await call("walkthrough", "full")).status, 404);
   delete process.env.SARVAM_API_KEY;
   assert.equal((await call("dental", "0")).status, 503);
 
@@ -183,6 +218,8 @@ test("sample voice route: only known lines, cached by the CDN, 503 when voice is
     assert.match(ok.headers.get("cache-control")!, /s-maxage=31536000/);
     await call("ca", "0");
     assert.equal(calls, 1, "a second request is served from memory");
+    assert.equal((await call("ca", "full")).status, 200);
+    assert.equal(calls, 2);
   } finally {
     globalThis.fetch = realFetch;
     delete process.env.SARVAM_API_KEY;

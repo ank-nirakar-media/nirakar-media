@@ -29,6 +29,7 @@ export function Short({ plan }: { plan: VideoPlan }) {
           <SceneView scene={scene} index={i} brand={plan.brand} layout={plan.layout} />
         </Sequence>
       ))}
+      {plan.voiceover && <Audio src={plan.voiceover.src} />}
       {plan.music && <Audio src={plan.music.src} volume={plan.music.volume} loop />}
       <Progress brand={plan.brand} />
       <Footer brand={plan.brand} layout={plan.layout} />
