@@ -5,7 +5,9 @@ import { one } from "../lib/db";
 import { brandColors, planFromScenes, safeColor } from "../lib/video/build";
 import { captionGroups, estimateSeconds, layoutFor, LAYOUTS, planFrames, sceneFrames, timeWords } from "../lib/video/plan";
 import { createSampleRequest, phoneKey, setSampleStatus } from "../lib/video/requests";
-import { samplePlan, samples, WATERMARK } from "../lib/video/samples";
+import { samplePlan, samples, sampleVoiceUrl, WATERMARK } from "../lib/video/samples";
+import { synthesize } from "../lib/video/voice";
+import { GET as sampleVoice } from "../app/api/sample-voice/[sample]/[scene]/route";
 
 test("caption timings cover the spoken part of the scene, in order, without overlap", () => {
   const words = timeWords("Daant mein dard? Ise ignore mat kijiye.", 3);
@@ -83,8 +85,10 @@ test("website samples are watermarked and take the visitor's business name", () 
     assert.ok(!/\d+%|₹\s?\d/.test(JSON.stringify(s.scenes)), `${s.id} has no invented numbers or prices`);
   }
   const mine = samplePlan(samples[0], { name: "Ankit Dental", primary: "#000000", accent: "#FFFFFF" });
-  assert.ok(mine.scenes.at(-1)!.words.some((w) => w.text === "Ankit"));
+  assert.equal(mine.brand.name, "Ankit Dental");
   assert.ok(!JSON.stringify(mine).includes("Smile Dental"));
+  const cafe = samplePlan(samples[1], { name: "Ankit Cafe", primary: "#000000", accent: "#FFFFFF" });
+  assert.equal(cafe.scenes.at(-1)!.onScreenText, "Ankit Cafe", "on-screen brand name follows the visitor's name");
 });
 
 test("free sample requests: one per phone number, any format", async () => {
@@ -105,4 +109,76 @@ test("free sample requests: one per phone number, any format", async () => {
   assert.equal(await setSampleStatus(row!.id, "approved", "Make it in Hindi"), true);
   assert.equal(await setSampleStatus(row!.id, "deleted", ""), false);
   assert.equal((await one<{ status: string }>("SELECT status FROM sample_requests WHERE id = $1", [row!.id]))!.status, "approved");
+});
+
+test("sample voice lines: never the business name, Devanagari for Hindi voices, within Sarvam's limit", () => {
+  for (const s of samples) {
+    for (const x of s.scenes) {
+      assert.ok(x.say.trim() && x.say.length <= 2500);
+      assert.ok(!x.say.includes(s.brand.name) && !x.voiceover.includes(s.brand.name), `${s.id}: "${x.say}" names the business`);
+      if (s.voice.languageCode === "hi-IN") assert.ok(!/[a-z]{3}/i.test(x.say), `${s.id}: Hindi voice line should be Devanagari: "${x.say}"`);
+    }
+  }
+  assert.match(sampleVoiceUrl(samples[0], 2), /^\/api\/sample-voice\/dental\/2\?v=[0-9a-z]+$/);
+  assert.notEqual(sampleVoiceUrl(samples[0], 0), sampleVoiceUrl(samples[0], 1));
+});
+
+test("with voice, scenes last as long as the speech and carry the audio", () => {
+  const track = samples[0].scenes.map((_, i) => ({ src: `/v/${i}.mp3`, seconds: 2 + i }));
+  const plan = samplePlan(samples[0], undefined, track);
+  assert.deepEqual(plan.scenes.map((x) => x.durationSec), [2.35, 3.35, 4.35, 5.35]);
+  assert.equal(plan.scenes[3].audioSrc, "/v/3.mp3");
+  assert.ok(plan.scenes[3].words.at(-1)!.end <= 5.35);
+});
+
+test("Sarvam request matches the documented API, and the key never leaves the header", async () => {
+  const realFetch = globalThis.fetch;
+  let seen: { url: string; init: RequestInit } | undefined;
+  globalThis.fetch = (async (url: string, init: RequestInit) => {
+    seen = { url, init };
+    return new Response(JSON.stringify({ request_id: "x", audios: [Buffer.from("ID3audio").toString("base64")] }), { status: 200 });
+  }) as typeof fetch;
+  try {
+    delete process.env.SARVAM_API_KEY;
+    assert.deepEqual(await synthesize({ text: "नमस्ते", languageCode: "hi-IN", speaker: "priya" }), { ok: false, error: "SARVAM_API_KEY is not set" });
+    process.env.SARVAM_API_KEY = "test-key";
+    const res = await synthesize({ text: "नमस्ते", languageCode: "hi-IN", speaker: "priya" });
+    assert.ok(res.ok && res.audio.toString() === "ID3audio");
+    assert.equal(seen!.url, "https://api.sarvam.ai/text-to-speech");
+    assert.equal((seen!.init.headers as Record<string, string>)["api-subscription-key"], "test-key");
+    const body = JSON.parse(String(seen!.init.body));
+    assert.deepEqual(body, { text: "नमस्ते", language_code: "hi-IN", model: "bulbul:v3", speaker: "priya", pace: 1, output_audio_codec: "mp3" });
+
+    globalThis.fetch = (async () => new Response("bad key", { status: 403 })) as unknown as typeof fetch;
+    const bad = await synthesize({ text: "hi", languageCode: "en-IN", speaker: "rohan" });
+    assert.ok(!bad.ok && bad.error.startsWith("Sarvam 403"));
+  } finally {
+    globalThis.fetch = realFetch;
+    delete process.env.SARVAM_API_KEY;
+  }
+});
+
+test("sample voice route: only known lines, cached by the CDN, 503 when voice is off", async () => {
+  const call = (sample: string, scene: string) => sampleVoice(new Request("http://x"), { params: Promise.resolve({ sample, scene }) });
+  assert.equal((await call("nope", "0")).status, 404);
+  assert.equal((await call("dental", "9")).status, 404);
+  assert.equal((await call("dental", "1abc")).status, 404);
+  delete process.env.SARVAM_API_KEY;
+  assert.equal((await call("dental", "0")).status, 503);
+
+  const realFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = (async () => { calls++; return new Response(JSON.stringify({ audios: [Buffer.from("mp3").toString("base64")] })); }) as unknown as typeof fetch;
+  process.env.SARVAM_API_KEY = "test-key";
+  try {
+    const ok = await call("ca", "0");
+    assert.equal(ok.status, 200);
+    assert.equal(ok.headers.get("content-type"), "audio/mpeg");
+    assert.match(ok.headers.get("cache-control")!, /s-maxage=31536000/);
+    await call("ca", "0");
+    assert.equal(calls, 1, "a second request is served from memory");
+  } finally {
+    globalThis.fetch = realFetch;
+    delete process.env.SARVAM_API_KEY;
+  }
 });

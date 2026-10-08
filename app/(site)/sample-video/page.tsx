@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { VideoPreview } from "@/components/VideoPreview";
+import { SamplePlayer } from "@/components/SamplePlayer";
 import { VideoTry } from "@/components/VideoTry";
-import { samplePlan, samples } from "@/lib/video/samples";
+import { samples } from "@/lib/video/samples";
+import { voiceConfigured } from "@/lib/video/voice";
 import { SAMPLE_LANGUAGES } from "@/lib/video/requests";
 
 export const metadata: Metadata = {
@@ -21,14 +22,16 @@ type Search = { sent?: string; already?: string; error?: string };
 
 export default async function SampleVideoPage({ searchParams }: { searchParams: Promise<Search> }) {
   const { sent, already, error } = await searchParams;
+  const voice = voiceConfigured();
   return (
     <>
       <section className="wrap page-hero">
         <p className="eyebrow">Sample videos</p>
         <h1>See what the <span className="grad-text">engine makes</span></h1>
         <p className="lead">
-          These are made by the same engine that makes client videos. The businesses are examples. Previews here play silently in your
-          browser; finished videos come with voice, footage and music.
+          These are made by the same engine that makes client videos. The businesses are examples. {voice
+            ? "Press play to hear the AI voice. Finished videos also get stock footage and music."
+            : "Previews here play silently in your browser; finished videos come with voice, footage and music."}
         </p>
       </section>
 
@@ -36,7 +39,7 @@ export default async function SampleVideoPage({ searchParams }: { searchParams: 
         <div className="wrap video-gallery">
           {samples.map((s) => (
             <figure key={s.id} className="video-card">
-              <VideoPreview plan={samplePlan(s)} label={`Example: ${s.niche} video in ${s.language}`} />
+              <SamplePlayer id={s.id} voice={voice} label={`Example: ${s.niche} video in ${s.language}`} />
               <figcaption><b>{s.niche}</b><span>{s.language}</span></figcaption>
             </figure>
           ))}
@@ -50,7 +53,7 @@ export default async function SampleVideoPage({ searchParams }: { searchParams: 
             <h2>Put your business in it</h2>
             <p className="lead">Type your business name and pick your colour. The video updates as you type.</p>
           </div>
-          <VideoTry />
+          <VideoTry voice={voice} />
         </div>
       </section>
 

@@ -8,8 +8,8 @@ import { Languages } from "@/components/Languages";
 import { dashboardMetrics, faqs, highlights, stageCount, verticals, workflow } from "@/lib/content";
 import { HeroDashboard } from "@/components/HeroDashboard";
 import { ServiceIcon } from "@/components/ServiceIcon";
-import { VideoPreview } from "@/components/VideoPreview";
-import { samplePlan, samples } from "@/lib/video/samples";
+import { SamplePlayer } from "@/components/SamplePlayer";
+import { voiceConfigured } from "@/lib/video/voice";
 
 // Re-checked every minute so the founding-offer seat count stays current.
 export const revalidate = 60;
@@ -81,7 +81,7 @@ export default async function Home() {
             </p>
             <div className="btn-row"><Link href="/sample-video" className="btn btn-primary">Try it with your business</Link><Link href="/sample-video#free-sample" className="btn btn-ghost">Get a free sample</Link></div>
           </div>
-          <VideoPreview plan={samplePlan(samples[0])} label="Example video for a dental clinic" />
+          <SamplePlayer id="dental" voice={voiceConfigured()} label="Example video for a dental clinic" />
         </div>
       </section>
 

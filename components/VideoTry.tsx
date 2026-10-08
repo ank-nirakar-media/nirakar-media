@@ -3,16 +3,18 @@
 import { useMemo, useState } from "react";
 import { safeColor } from "@/lib/video/build";
 import { samplePlan, samples } from "@/lib/video/samples";
+import { useSampleVoice } from "./useSampleVoice";
 import { VideoPreview } from "./VideoPreview";
 
 // "Try it with your business": swaps the visitor's name, handle and colour into an example video, live,
 // in their browser. Nothing is sent to us and nothing is generated on a server.
-export function VideoTry() {
+export function VideoTry({ voice }: { voice: boolean }) {
   const [sampleId, setSampleId] = useState(samples[0].id);
   const [name, setName] = useState("");
   const [handle, setHandle] = useState("");
   const [color, setColor] = useState("#8B5CF6");
   const sample = samples.find((s) => s.id === sampleId) ?? samples[0];
+  const { track, state } = useSampleVoice(sample, voice);
 
   const plan = useMemo(() => {
     const primary = safeColor(color, sample.brand.primary);
@@ -22,8 +24,8 @@ export function VideoTry() {
       primary,
       accent: sample.brand.accent,
     };
-    return samplePlan(sample, brand);
-  }, [sample, name, handle, color]);
+    return samplePlan(sample, brand, track);
+  }, [sample, name, handle, color, track]);
 
   return (
     <div className="video-try">
@@ -46,9 +48,13 @@ export function VideoTry() {
           <label htmlFor="vt-color">Brand colour</label>
           <input id="vt-color" type="color" value={color} onChange={(e) => setColor(e.target.value)} />
         </div>
-        <p className="fine">This preview runs in your browser and is silent. Finished videos have an AI voice in your language, stock footage that fits your business, and music.</p>
+        <p className="fine">
+          {state === "ready" || state === "loading"
+            ? "Press play to hear it. This preview runs in your browser. Finished videos also have stock footage that fits your business, and music."
+            : "This preview runs in your browser and is silent. Finished videos have an AI voice in your language, stock footage that fits your business, and music."}
+        </p>
       </div>
-      <VideoPreview plan={plan} autoPlay label={`Example video for ${plan.brand.name}`} />
+      <VideoPreview key={`${sample.id}-${track ? "voiced" : "silent"}`} plan={plan} label={`Example video for ${plan.brand.name}`} />
     </div>
   );
 }
