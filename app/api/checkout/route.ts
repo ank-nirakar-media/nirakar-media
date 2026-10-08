@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { recordSubscription, offerStatus } from "@/lib/offer";
 import { getPlan } from "@/lib/plans";
 import { createSubscription, ensurePlan, razorpayConfigured } from "@/lib/razorpay";
 import { siteUrl } from "@/lib/site-url";
@@ -19,9 +20,12 @@ export async function POST(req: Request) {
 
   const extraLanguages = Math.min(3, Math.max(0, Math.floor(Number(form.get("extraLanguages")) || 0)));
   try {
-    const planId = await ensurePlan(plan, extraLanguages);
-    const sub = await createSubscription(planId, { plan: plan.id, extraLanguages: String(extraLanguages) });
-    const params = new URLSearchParams({ sub: sub.id, plan: plan.id, lang: String(extraLanguages) });
+    // The founding offer is decided here, on the server, from the live seat count and end date.
+    const { open: offer } = await offerStatus();
+    const planId = await ensurePlan(plan, extraLanguages, offer);
+    const sub = await createSubscription(planId, { plan: plan.id, extraLanguages: String(extraLanguages), offer: offer ? "founding" : "" });
+    await recordSubscription(sub.id, plan.id, offer);
+    const params = new URLSearchParams({ sub: sub.id, plan: plan.id, lang: String(extraLanguages), offer: offer ? "1" : "0" });
     return NextResponse.redirect(`${base}/checkout/pay?${params}`, 303);
   } catch (err) {
     console.error("Razorpay checkout failed", err);

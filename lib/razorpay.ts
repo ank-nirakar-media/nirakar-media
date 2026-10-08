@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import type { Plan } from "./plans";
+import { priceInr, type Plan } from "./plans";
 
 // Minimal Razorpay REST client (no SDK needed). Keys come from env vars.
 const API = process.env.RAZORPAY_API_BASE || "https://api.razorpay.com/v1";
@@ -48,23 +48,22 @@ type RzpPlan = { id: string; item: { name: string; amount: number; currency: str
 type RzpList<T> = { items: T[]; count: number };
 export type RzpSubscription = { id: string; status: string; short_url?: string; plan_id: string };
 
-export function planName(plan: Plan, extraLanguages: number) {
-  return extraLanguages > 0
-    ? `Nirakar Media ${plan.name} + ${extraLanguages} extra language${extraLanguages > 1 ? "s" : ""}`
-    : `Nirakar Media ${plan.name}`;
+export function planName(plan: Plan, extraLanguages: number, offer = false) {
+  const base = `Nirakar Media ${plan.name}${offer ? " (founding offer)" : ""}`;
+  return extraLanguages > 0 ? `${base} + ${extraLanguages} extra language${extraLanguages > 1 ? "s" : ""}` : base;
 }
 
-export function planAmountInr(plan: Plan, extraLanguages: number) {
-  return plan.priceInr + extraLanguages * plan.extraLanguageInr;
+export function planAmountInr(plan: Plan, extraLanguages: number, offer = false) {
+  return priceInr(plan, offer) + extraLanguages * plan.extraLanguageInr;
 }
 
 // Razorpay subscriptions bill a fixed plan, so each plan + language combination
 // is its own Razorpay plan. We find it by name and amount, and create it the
 // first time someone buys that combination. Changing a price in lib/plans.ts
 // therefore creates a new Razorpay plan; existing subscribers keep the old one.
-export async function ensurePlan(plan: Plan, extraLanguages: number): Promise<string> {
-  const name = planName(plan, extraLanguages);
-  const amount = planAmountInr(plan, extraLanguages) * 100;
+export async function ensurePlan(plan: Plan, extraLanguages: number, offer = false): Promise<string> {
+  const name = planName(plan, extraLanguages, offer);
+  const amount = planAmountInr(plan, extraLanguages, offer) * 100;
   for (let skip = 0; skip < 1000; skip += 100) {
     const page = await call<RzpList<RzpPlan>>("GET", `/plans?count=100&skip=${skip}`);
     const match = page.items.find(
@@ -77,7 +76,7 @@ export async function ensurePlan(plan: Plan, extraLanguages: number): Promise<st
     period: "monthly",
     interval: 1,
     item: { name, amount, currency: "INR", description: plan.tagline },
-    notes: { plan: plan.id, extraLanguages: String(extraLanguages) },
+    notes: { plan: plan.id, extraLanguages: String(extraLanguages), offer: offer ? "founding" : "" },
   });
   return created.id;
 }

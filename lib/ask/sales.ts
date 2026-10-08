@@ -5,7 +5,8 @@ import { generateJson, USD_TO_INR } from "../ai/claude";
 import { randomToken } from "../crypto";
 import { one, query } from "../db";
 import { sendEmail } from "../email";
-import { formatInr, getPlan, type PlanId } from "../plans";
+import { offerForDisplay } from "../offer";
+import { formatInr, getPlan, priceInr, type PlanId } from "../plans";
 import { site } from "../content";
 import { configuredSiteUrl } from "../site-url";
 import { allowedAmounts, knowledgePack } from "./knowledge";
@@ -168,7 +169,8 @@ export async function askPurple(
   const plan = turn.plan !== "none" ? getPlan(turn.plan) : undefined;
   const result: AskResult = { conversationId, reply };
   if (turn.action === "show_checkout" && plan) {
-    result.checkout = { plan: plan.id, name: plan.name, price: formatInr(plan.priceInr) };
+    const offer = await offerForDisplay();
+    result.checkout = { plan: plan.id, name: plan.name, price: formatInr(priceInr(plan, offer.open)) };
   }
 
   const lead = {

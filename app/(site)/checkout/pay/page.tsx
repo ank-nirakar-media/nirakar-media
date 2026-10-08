@@ -9,10 +9,11 @@ import { PayButton } from "./PayButton";
 
 export const metadata: Metadata = { title: "Complete your subscription", robots: { index: false } };
 
-type Search = { sub?: string; plan?: string; lang?: string };
+type Search = { sub?: string; plan?: string; lang?: string; offer?: string };
 
 export default async function PayPage({ searchParams }: { searchParams: Promise<Search> }) {
-  const { sub = "", plan: planId = "", lang = "0" } = await searchParams;
+  const { sub = "", plan: planId = "", lang = "0", offer: offerParam } = await searchParams;
+  const offer = offerParam === "1";
   const plan = getPlan(planId);
   const keyId = razorpayKeyId();
   if (!plan || !/^sub_[A-Za-z0-9]+$/.test(sub) || !keyId) redirect("/pricing?error=checkout");
@@ -23,16 +24,16 @@ export default async function PayPage({ searchParams }: { searchParams: Promise<
   return (
     <section className="wrap page-hero" style={{ paddingBottom: 96 }}>
       <p className="eyebrow">Secure checkout</p>
-      <h1>{planName(plan, extra).replace("Nirakar Media ", "")}</h1>
+      <h1>{planName(plan, extra, offer).replace("Nirakar Media ", "")}</h1>
       <p className="lead">
-        {formatInr(planAmountInr(plan, extra))} a month, billed through Razorpay. ₹0 setup, cancel any time. Your bank may ask you
+        {formatInr(planAmountInr(plan, extra, offer))} a month, billed through Razorpay. ₹0 setup, cancel any time. Your bank may ask you
         to approve the recurring payment (RBI e-mandate).
       </p>
       <div className="btn-row">
         <PayButton
           keyId={keyId}
           subscriptionId={sub}
-          description={planName(plan, extra)}
+          description={planName(plan, extra, offer)}
           callbackUrl={`${site}/api/checkout/verify`}
           cancelUrl={`${site}/checkout/cancel?plan=${plan.id}`}
         />

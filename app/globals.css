@@ -288,9 +288,14 @@ p { margin: 0; }
 .plan { position: relative; display: flex; flex-direction: column; gap: 20px; padding: 30px; border-radius: 22px; border: 1px solid var(--line); background: rgba(19,22,58,.7); min-width: 0; }
 .plan.popular { background: linear-gradient(180deg, rgba(139,92,246,.22), rgba(19,22,58,.9) 55%); border-color: rgba(196,181,253,.55); box-shadow: 0 30px 80px -40px rgba(139,92,246,.9); }
 .plan-badge { position: absolute; top: -13px; left: 30px; font-family: var(--font-mono); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; background: var(--grad); color: #0b0620; padding: 5px 12px; border-radius: 999px; font-weight: 600; }
-.price { display: flex; align-items: baseline; gap: 6px; }
+.price { display: flex; align-items: baseline; gap: 2px 6px; flex-wrap: wrap; }
 .price strong { font-family: var(--font-display); font-size: 2.8rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
 .price span { color: var(--muted); }
+.price-was { flex-basis: 100%; color: var(--muted); font-size: 1.15rem; text-decoration-thickness: 2px; text-decoration-color: #D08BFF; }
+.offer-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 24px; padding: 14px 18px; border-radius: 14px; border: 1px solid rgba(208, 139, 255, .45); background: linear-gradient(90deg, rgba(139, 92, 246, .18), rgba(79, 107, 255, .12)); }
+.offer-banner p { margin: 0; flex: 1 1 320px; }
+.offer-tag { font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #D08BFF; }
+.offer-seats { font-weight: 700; white-space: nowrap; padding: 4px 12px; border-radius: 999px; background: rgba(208, 139, 255, .18); }
 .plan .checks { flex: 1; }
 .plan form { margin: 0; }
 .fine { font-size: .85rem; color: var(--muted); }

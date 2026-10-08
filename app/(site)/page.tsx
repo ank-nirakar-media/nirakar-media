@@ -1,14 +1,19 @@
 import Link from "next/link";
 import { Cta } from "@/components/Cta";
 import { Plans } from "@/components/Plans";
-import { formatInr, plans } from "@/lib/plans";
+import { offerForDisplay } from "@/lib/offer";
+import { formatInr, plans, priceInr } from "@/lib/plans";
 import { HumanAi } from "@/components/HumanAi";
 import { Languages } from "@/components/Languages";
 import { dashboardMetrics, faqs, highlights, stageCount, verticals, workflow } from "@/lib/content";
 import { HeroDashboard } from "@/components/HeroDashboard";
 import { ServiceIcon } from "@/components/ServiceIcon";
 
-export default function Home() {
+// Re-checked every minute so the founding-offer seat count stays current.
+export const revalidate = 60;
+
+export default async function Home() {
+  const offer = await offerForDisplay();
   return (
     <>
       <section className="hero">
@@ -30,7 +35,7 @@ export default function Home() {
             <ul className="hero-checks">
               <li>Strategic, not just creative</li>
               <li>One team, end to end</li>
-              <li>Plans from {formatInr(plans[0].priceInr)}/month</li>
+              <li>Plans from {formatInr(priceInr(plans[0], offer.open))}/month</li>
             </ul>
           </div>
           <HeroDashboard />

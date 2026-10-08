@@ -231,3 +231,15 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 
 CREATE INDEX IF NOT EXISTS chat_messages_conversation ON chat_messages (conversation_id, id);
 CREATE INDEX IF NOT EXISTS chat_conversations_visitor ON chat_conversations (visitor, created_at);
+
+-- Razorpay subscriptions started from checkout. offer marks a founding-offer price, and a row
+-- with activated_at set holds one of the founding seats (lib/offer.ts).
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id            TEXT PRIMARY KEY,
+  plan          TEXT NOT NULL,
+  offer         BOOLEAN NOT NULL DEFAULT false,
+  status        TEXT NOT NULL DEFAULT 'created',
+  activated_at  TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);

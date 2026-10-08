@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { setSubscriptionStatus } from "@/lib/offer";
 import { verifyWebhookSignature } from "@/lib/razorpay";
 
 // In the Razorpay Dashboard (Accounts & Settings > Webhooks) point a webhook at
@@ -17,6 +18,12 @@ export async function POST(req: Request) {
   const sub = event.payload.subscription?.entity;
   const payment = event.payload.payment?.entity;
   const plan = sub?.notes?.plan;
+
+  if (sub?.id && sub.status && event.event.startsWith("subscription.")) {
+    await setSubscriptionStatus(sub.id, sub.status, event.event === "subscription.activated" || event.event === "subscription.charged").catch((err) =>
+      console.error("Could not record the subscription", err),
+    );
+  }
 
   switch (event.event) {
     case "subscription.activated":

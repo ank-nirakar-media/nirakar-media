@@ -79,6 +79,26 @@ export const plans: Plan[] = [
   },
 ];
 
+// Founding offer (owner's decision, 2026-10-08): the first `seats` paying customers get these
+// prices, as long as they stay subscribed, until `endsAt` (India time). The list price above is
+// shown struck through while the offer is open. Seats are counted in lib/offer.ts.
+export const launchOffer = {
+  name: "Founding offer",
+  seats: 20,
+  endsAt: "2026-12-31T23:59:59+05:30",
+  endsLabel: "31 December 2026",
+  priceInr: { starter: 999, growth: 5999, pro: 14999 } as Record<PlanId, number>,
+};
+
+export function offerOpen(seatsTaken: number, now = new Date()): boolean {
+  return seatsTaken < launchOffer.seats && now.getTime() <= Date.parse(launchOffer.endsAt);
+}
+
+// The monthly price a new customer pays for a plan, with or without the founding offer.
+export function priceInr(plan: Plan, offer: boolean): number {
+  return offer ? launchOffer.priceInr[plan.id] : plan.priceInr;
+}
+
 export function getPlan(id: string): Plan | undefined {
   return plans.find((p) => p.id === id);
 }
