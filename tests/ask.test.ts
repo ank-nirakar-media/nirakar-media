@@ -5,7 +5,7 @@ import { query } from "../lib/db";
 import { generateJson, priceFor } from "../lib/ai/claude";
 import { allowedAmounts, knowledgePack } from "../lib/ask/knowledge";
 import { askPurple, DISCLAIMER, inventedAmounts, LIMITS, systemPrompt } from "../lib/ask/sales";
-import { formatInr, plans } from "../lib/plans";
+import { formatInr, offerOpen, plans } from "../lib/plans";
 
 type Gen = typeof generateJson;
 const turn = (over: Record<string, unknown> = {}) => ({
@@ -41,7 +41,7 @@ test("the knowledge pack carries every plan price from lib/plans.ts", () => {
 });
 
 test("only published rupee amounts are allowed in a reply", () => {
-  assert.deepEqual([...allowedAmounts()].sort((a, b) => a - b), [0, 999, 2499, 3999, 4999, 14999, 34999]);
+  assert.deepEqual([...allowedAmounts()].sort((a, b) => a - b), [0, 999, 2499, 2999, 3999, 4999, 5999, 14999, 34999]);
   assert.deepEqual(inventedAmounts("Growth is ₹14,999 a month, and an extra language is ₹2,499."), []);
   assert.deepEqual(inventedAmounts("For you, Growth is just ₹9,999!"), [9999]);
   assert.deepEqual(inventedAmounts("Pro costs Rs. 30000 or 25,000 rupees"), [30000, 25000]);
@@ -58,7 +58,9 @@ test("a reply with a made-up price is replaced before the visitor sees it", asyn
 
 test("checkout is offered only for a real plan, with the price from lib/plans.ts", async () => {
   const ok = await askPurple({ visitor: "visitor-checkout-01", message: "I want Growth" }, fake(turn({ action: "show_checkout", plan: "growth" })));
-  assert.deepEqual(ok.checkout, { plan: "growth", name: "Growth", price: formatInr(14999) });
+  // While the founding offer is open (as it is for an empty test database before its end date), checkout shows the offer price.
+  const growth = offerOpen(0) ? 2999 : 14999;
+  assert.deepEqual(ok.checkout, { plan: "growth", name: "Growth", price: formatInr(growth) });
   const none = await askPurple({ visitor: "visitor-checkout-02", message: "buy" }, fake(turn({ action: "show_checkout", plan: "none" })));
   assert.equal(none.checkout, undefined);
   const bogus = await askPurple({ visitor: "visitor-checkout-03", message: "buy" }, fake(turn({ action: "show_checkout", plan: "enterprise" })));

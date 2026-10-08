@@ -1,11 +1,25 @@
 import Link from "next/link";
-import { formatInr, plans } from "@/lib/plans";
+import { offerForDisplay } from "@/lib/offer";
+import { formatInr, launchOffer, plans, priceInr } from "@/lib/plans";
 
-export function Plans() {
+export async function Plans() {
+  const offer = await offerForDisplay();
   return (
     <>
+      {offer.open && (
+        <div className="offer-banner" role="note">
+          <span className="offer-tag">Exclusive {launchOffer.name.toLowerCase()} · limited time</span>
+          <p>
+            <b>The first {launchOffer.seats} customers keep these prices for as long as they stay subscribed.</b> The offer ends on{" "}
+            {launchOffer.endsLabel} or when the {launchOffer.seats} spots are taken, whichever comes first.
+          </p>
+          <span className="offer-seats">{offer.seatsLeft} of {launchOffer.seats} spots left</span>
+        </div>
+      )}
       <div className="plans">
-        {plans.map((plan) => (
+        {plans.map((plan) => {
+          const price = priceInr(plan, offer.open);
+          return (
           <article key={plan.id} className={`plan${plan.popular ? " popular" : ""}`}>
             {plan.popular && <span className="plan-badge">Most chosen</span>}
             <div className="stack" style={{ gap: 8 }}>
@@ -13,7 +27,8 @@ export function Plans() {
               <p className="muted">{plan.tagline}</p>
             </div>
             <div className="price">
-              <strong>{formatInr(plan.priceInr)}</strong>
+              {offer.open && <s className="price-was" aria-label={`Was ${formatInr(plan.priceInr)}`}>{formatInr(plan.priceInr)}</s>}
+              <strong>{formatInr(price)}</strong>
               <span>/ month</span>
             </div>
             <ul className="checks">
@@ -28,7 +43,7 @@ export function Plans() {
                 <select id={`lang-${plan.id}`} name="extraLanguages" defaultValue="0">
                   {[0, 1, 2, 3].map((n) => (
                     <option key={n} value={n}>
-                      {n === 0 ? `None (${plan.languages} included)` : `${n} more: ${formatInr(plan.priceInr + n * plan.extraLanguageInr)}/mo total`}
+                      {n === 0 ? `None (${plan.languages} included)` : `${n} more: ${formatInr(price + n * plan.extraLanguageInr)}/mo total`}
                     </option>
                   ))}
                 </select>
@@ -39,7 +54,8 @@ export function Plans() {
             </form>
             <p className="fine">₹0 setup · billed monthly · cancel any time</p>
           </article>
-        ))}
+          );
+        })}
       </div>
       <div className="custom-plan">
         <div>
