@@ -41,6 +41,7 @@ export async function GET() {
     instagram: process.env.META_APP_ID && process.env.META_APP_SECRET ? "set" : "not yet",
     voice: process.env.SARVAM_API_KEY ? "set" : "not yet",
     footage: process.env.PEXELS_API_KEY ? "pexels" : process.env.PIXABAY_API_KEY ? "pixabay" : "not yet",
+    exports: process.env.BLOB_STORE_ID ? "blob store connected" : process.env.BLOB_READ_WRITE_TOKEN ? "blob token set" : "not yet",
     email: process.env.RESEND_API_KEY ? "set" : "missing",
     emailFrom: emailFrom(),
     contactWebhook: set("CONTACT_WEBHOOK_URL"),

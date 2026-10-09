@@ -272,3 +272,19 @@ CREATE TABLE IF NOT EXISTS voice_settings (
   updated_by  TEXT NOT NULL DEFAULT '',
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- MP4 exports of the website demos (Admin > Exports), rendered on Vercel Sandbox and stored in Vercel Blob.
+CREATE TABLE IF NOT EXISTS video_exports (
+  id          SERIAL PRIMARY KEY,
+  source      TEXT NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'starting' CHECK (status IN ('starting', 'rendering', 'done', 'error')),
+  progress    REAL NOT NULL DEFAULT 0,
+  sandbox_id  TEXT,
+  cmd_id      TEXT,
+  url         TEXT,
+  size_bytes  BIGINT,
+  error       TEXT,
+  created_by  TEXT NOT NULL DEFAULT '',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);

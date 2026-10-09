@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { AbsoluteFill, Audio, interpolate, Sequence, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { FPS, type VideoPlan } from "../lib/video/plan";
-import { walkScenes, type WalkScene } from "../lib/video/walkthrough";
+import { walkFrames, walkScenes, type WalkScene } from "../lib/video/walkthrough";
 import { FONT, loadFonts } from "./fonts";
 import { Short } from "./Short";
 
@@ -13,9 +13,7 @@ export type WalkProps = { durations: number[]; audio?: string[]; phonePlan: Vide
 
 const C = { ink: "#07081A", card: "#121433", line: "rgba(196,181,253,.18)", violet: "#8B5CF6", soft: "#C4B5FD", pink: "#D08BFF", muted: "#A7A3C9", green: "#34D399" };
 
-export function walkFrames(durations: number[]) {
-  return Math.max(1, durations.reduce((n, d) => n + Math.round(d * FPS), 0));
-}
+export { walkFrames };
 
 export function Walkthrough({ durations, audio, phonePlan }: WalkProps) {
   let at = 0;
