@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { query } from "../lib/db";
 import { createExport, EXPORT_SOURCES, exportInput, exportPath, getExport, listExports, refreshExport, renderedNotUploaded, renderConfigured, startExport } from "../lib/video/exports";
+import { publicSiteUrl } from "../lib/site-url";
 import { samples } from "../lib/video/samples";
 import { walkScenes } from "../lib/video/walkthrough";
 import { shortExportMetadata, walkExportMetadata } from "../remotion/exports";
@@ -72,4 +73,22 @@ test("exports: a private store (BLOB_STORE_ID) counts as connected, and the sand
   assert.equal(renderedNotUploaded("Rendered 300/300 ... BLOB_READ_WRITE_TOKEN is not set.\n"), true);
   assert.equal(renderedNotUploaded("Error: Could not open browser"), false);
   assert.equal(exportPath("walkthrough", 7), "exports/nirakar-walkthrough-7.mp4");
+});
+
+test("exports: the render fetches voices from a public address, never the login-gated preview", () => {
+  const env = { ...process.env };
+  const req = new Request("https://nirakar-media-git-x.vercel.app/api/admin/exports", { method: "POST" });
+  try {
+    delete process.env.SITE_URL;
+    delete process.env.NEXT_PUBLIC_SITE_URL;
+    process.env.VERCEL_PROJECT_PRODUCTION_URL = "www.nirakarmedia.com";
+    assert.equal(publicSiteUrl(req), "https://www.nirakarmedia.com");
+    process.env.SITE_URL = "https://www.example.com/";
+    assert.equal(publicSiteUrl(req), "https://www.example.com");
+    delete process.env.SITE_URL;
+    delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    assert.equal(publicSiteUrl(req), "https://nirakar-media-git-x.vercel.app");
+  } finally {
+    process.env = env;
+  }
 });
