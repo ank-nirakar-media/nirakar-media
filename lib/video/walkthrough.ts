@@ -22,3 +22,8 @@ export const walkScenes: WalkScene[] = [
 export function walkDurations(audioSec?: (number | undefined)[]): number[] {
   return walkScenes.map((s, i) => Math.round(((audioSec?.[i] ?? estimateSeconds(s.say)) + 0.8) * 30) / 30);
 }
+
+// Total frames for a set of scene lengths (30 fps).
+export function walkFrames(durations: number[]) {
+  return Math.max(1, durations.reduce((n, d) => n + Math.round(d * 30), 0));
+}
