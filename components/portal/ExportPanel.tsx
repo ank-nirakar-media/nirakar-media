@@ -61,7 +61,7 @@ export function ExportPanel({ sources, initial, disabled }: { sources: { id: str
                 <td>{new Date(r.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</td>
                 <td aria-live="polite">
                   {r.status === "done" && r.url ? (
-                    <a className="btn btn-sm" href={r.url} download target="_blank" rel="noreferrer">Download MP4{r.size_bytes ? ` (${(r.size_bytes / 1e6).toFixed(1)} MB)` : ""}</a>
+                    <a className="btn btn-sm" href={`/api/admin/exports/${r.id}/download`} target="_blank" rel="noreferrer">Download MP4{r.size_bytes ? ` (${(r.size_bytes / 1e6).toFixed(1)} MB)` : ""}</a>
                   ) : r.status === "error" ? (
                     <span className="muted">Failed: {r.error}</span>
                   ) : (

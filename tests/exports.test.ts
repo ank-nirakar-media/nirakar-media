@@ -2,7 +2,7 @@ import "./helpers";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { query } from "../lib/db";
-import { createExport, EXPORT_SOURCES, exportInput, getExport, listExports, refreshExport, startExport } from "../lib/video/exports";
+import { createExport, EXPORT_SOURCES, exportInput, exportPath, getExport, listExports, refreshExport, renderedNotUploaded, renderConfigured, startExport } from "../lib/video/exports";
 import { samples } from "../lib/video/samples";
 import { walkScenes } from "../lib/video/walkthrough";
 import { shortExportMetadata, walkExportMetadata } from "../remotion/exports";
@@ -46,10 +46,11 @@ test("exports: rows are created only for known videos, and fail clearly without 
   assert.equal((await getExport(id))!.status, "starting");
 
   delete process.env.BLOB_READ_WRITE_TOKEN;
+  delete process.env.BLOB_STORE_ID;
   await startExport(id, SITE);
   const failed = (await getExport(id))!;
   assert.equal(failed.status, "error");
-  assert.match(failed.error!, /BLOB_READ_WRITE_TOKEN/);
+  assert.match(failed.error!, /No Blob store is connected/);
 
   const stuck = (await createExport("ca", "a@b.c"))!;
   await query("UPDATE video_exports SET created_at = now() - interval '20 minutes' WHERE id = $1", [stuck]);
@@ -59,4 +60,16 @@ test("exports: rows are created only for known videos, and fail clearly without 
 
   assert.deepEqual((await listExports()).map((r) => r.id), [fresh, stuck, id]);
   assert.equal(await refreshExport(9999), undefined);
+});
+
+test("exports: a private store (BLOB_STORE_ID) counts as connected, and the sandbox's missing-token stop means rendered", () => {
+  delete process.env.BLOB_READ_WRITE_TOKEN;
+  delete process.env.BLOB_STORE_ID;
+  assert.equal(renderConfigured(), false);
+  process.env.BLOB_STORE_ID = "store_test";
+  assert.equal(renderConfigured(), true);
+  delete process.env.BLOB_STORE_ID;
+  assert.equal(renderedNotUploaded("Rendered 300/300 ... BLOB_READ_WRITE_TOKEN is not set.\n"), true);
+  assert.equal(renderedNotUploaded("Error: Could not open browser"), false);
+  assert.equal(exportPath("walkthrough", 7), "exports/nirakar-walkthrough-7.mp4");
 });

@@ -18,7 +18,7 @@ export default async function AdminExports() {
         <h1 className="portal-title">Download the demos as MP4</h1>
         <p className="muted">
           Makes a real video file of a website demo, with the voice you picked in Voices and the same stock footage, for LinkedIn,
-          WhatsApp or ads. Each file takes a few minutes. Files are stored in Vercel Blob and anyone with the link can open them.
+          WhatsApp or ads. Each file takes a few minutes. Files are kept in your private Vercel Blob store; each Download click makes a link that works for one hour.
         </p>
       </div>
       {!renderConfigured() && (

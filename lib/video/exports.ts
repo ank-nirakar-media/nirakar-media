@@ -1,5 +1,6 @@
 // MP4 exports of the website demos (Admin > Exports), rendered with Remotion on Vercel Sandbox and saved
-// to Vercel Blob. One row per export in video_exports; the admin page polls until the file is ready.
+// to a private Vercel Blob store. One row per export in video_exports; the admin page polls until the file
+// is ready, then downloads it through a short-lived signed link.
 import path from "node:path";
 import { query } from "../db";
 import { footageConfigured } from "./footage";
@@ -34,7 +35,16 @@ export const BUNDLE_DIR = ".remotion";
 // A render that hasn't started after this long is reported as failed instead of spinning forever.
 const START_LIMIT_MS = 15 * 60 * 1000;
 
-export const renderConfigured = () => Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+// A connected Blob store gives the project BLOB_STORE_ID (signed in with Vercel's OIDC token); older
+// stores give BLOB_READ_WRITE_TOKEN. Either works for the upload in finishExport.
+export const renderConfigured = () => Boolean(process.env.BLOB_STORE_ID || process.env.BLOB_READ_WRITE_TOKEN);
+// The sandbox renders to this file; this function then copies it to Blob.
+const SANDBOX_FILE = "/tmp/video.mp4";
+// The sandbox has no Blob credentials (OIDC only works inside our functions), so its own upload step is
+// handed an empty token. It fails with exactly this message after the video is rendered, and we upload it.
+const NO_TOKEN = "BLOB_READ_WRITE_TOKEN is not set.";
+export const renderedNotUploaded = (message: string) => message.includes(NO_TOKEN);
+export const exportPath = (source: string, id: number) => `exports/nirakar-${source}-${id}.mp4`;
 
 // What to render for one source: composition id and props. Voice and footage are URLs the render fetches.
 export function exportInput(source: string, site: string, voiceKey: string | null, clips?: SampleClip[]) {
@@ -75,8 +85,7 @@ async function update(id: number, fields: Partial<Pick<VideoExport, "status" | "
 export async function startExport(id: number, site: string): Promise<void> {
   const row = await getExport(id);
   if (!row) return;
-  const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!blobToken) return update(id, { status: "error", error: "BLOB_READ_WRITE_TOKEN is not set. Connect a Blob store to the project in Vercel, then redeploy." });
+  if (!renderConfigured()) return update(id, { status: "error", error: "No Blob store is connected. Connect one to the project in Vercel, then redeploy." });
   try {
     const voiceKey = voiceConfigured() ? settingsKey(await loadVoiceSettings()) : null;
     const sample = samples.find((s) => s.id === (row.source === "walkthrough" ? "dental" : row.source))!;
@@ -94,8 +103,9 @@ export async function startExport(id: number, site: string): Promise<void> {
       compositionId: input.compositionId,
       inputProps: input.inputProps,
       codec: "h264",
+      outputFile: SANDBOX_FILE,
       detached: true,
-      vercelBlob: { blobToken, access: "public", blobPath: `exports/nirakar-${row.source}-${id}.mp4` },
+      vercelBlob: { blobToken: "", access: "private" },
     });
     await update(id, { status: "rendering", sandbox_id: sandboxId, cmd_id: cmdId, progress: 0.2 });
   } catch (err) {
@@ -116,15 +126,40 @@ export async function refreshExport(id: number): Promise<VideoExport | undefined
   try {
     const { getRenderProgress } = await import("@remotion/vercel");
     const p = await getRenderProgress({ sandboxId: row.sandbox_id, cmdId: row.cmd_id });
-    if (p.stage === "done") await update(id, { status: "done", progress: 1, url: p.url, size_bytes: p.size });
-    else if (p.stage === "error") await update(id, { status: "error", error: p.message.slice(0, 500) });
+    const rendered = p.stage === "done" || (p.stage === "error" && renderedNotUploaded(p.message));
+    if (rendered) await finishExport(row);
+    else if (p.stage === "error") await update(id, { status: "error", error: p.message.slice(-500) });
     else if (p.stage === "expired") await update(id, { status: "error", error: "The render sandbox expired before the video finished." });
-    else await update(id, { progress: Math.round((0.2 + 0.8 * p.overallProgress) * 100) / 100 });
-    if (p.stage === "done" || p.stage === "error" || p.stage === "expired") await stopSandbox(row.sandbox_id);
+    else await update(id, { progress: Math.round((0.2 + 0.75 * p.overallProgress) * 100) / 100 });
+    if (rendered || p.stage === "error" || p.stage === "expired") await stopSandbox(row.sandbox_id);
   } catch (err) {
     console.error("Export progress failed", id, (err as Error).message);
   }
   return getExport(id);
+}
+
+// Copies the finished video out of the sandbox into the private Blob store.
+async function finishExport(row: VideoExport) {
+  const { Sandbox } = await import("@vercel/sandbox");
+  const { put } = await import("@vercel/blob");
+  const sandbox = await Sandbox.get({ sandboxId: row.sandbox_id! });
+  const file = await sandbox.readFileToBuffer({ path: SANDBOX_FILE });
+  if (!file?.length) return update(row.id, { status: "error", error: "The render finished but the video file was missing." });
+  const blob = await put(exportPath(row.source, row.id), file, { access: "private", contentType: "video/mp4", allowOverwrite: true });
+  await update(row.id, { status: "done", progress: 1, url: blob.pathname, size_bytes: file.length });
+}
+
+// A download link for a finished export, valid for an hour. The store is private, so links expire.
+export async function downloadUrl(pathname: string): Promise<string | undefined> {
+  try {
+    const { issueSignedToken, presignUrl } = await import("@vercel/blob");
+    const validUntil = Date.now() + 60 * 60 * 1000;
+    const token = await issueSignedToken({ pathname, operations: ["get"], validUntil });
+    return (await presignUrl(token, { operation: "get", pathname, access: "private", validUntil })).presignedUrl;
+  } catch (err) {
+    console.error("Export link failed", pathname, (err as Error).message);
+    return undefined;
+  }
 }
 
 async function stopSandbox(sandboxId: string) {
