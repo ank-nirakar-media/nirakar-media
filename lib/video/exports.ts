@@ -4,6 +4,7 @@
 import path from "node:path";
 import { query } from "../db";
 import { footageConfigured } from "./footage";
+import { mp3Seconds } from "./mp3";
 import { findSampleClips } from "./sample-clips";
 import { samples, type SampleClip } from "./samples";
 import { voiceConfigured } from "./voice";
@@ -59,6 +60,20 @@ export function exportInput(source: string, site: string, voiceKey: string | nul
   return { compositionId: "ShortExport", inputProps: { sample: source, voiceSrc, clips } };
 }
 
+// Downloads each voice once and reads its length, so the render doesn't have to (see lib/video/mp3.ts).
+// Also warms the CDN copy the render then fetches. Throws with the address when a voice can't be loaded.
+export async function measureVoices(srcs: string[], get: typeof fetch = fetch): Promise<number[]> {
+  return Promise.all(
+    srcs.map(async (src) => {
+      const res = await get(src);
+      if (!res.ok) throw new Error(`The voice ${src} answered ${res.status}`);
+      const seconds = mp3Seconds(new Uint8Array(await res.arrayBuffer()));
+      if (!seconds) throw new Error(`The voice ${src} isn't a readable MP3`);
+      return seconds;
+    }),
+  );
+}
+
 export async function createExport(source: string, by: string): Promise<number | undefined> {
   if (!EXPORT_SOURCES.some((s) => s.id === source)) return undefined;
   const [row] = await query<{ id: number }>("INSERT INTO video_exports (source, created_by) VALUES ($1, $2) RETURNING id", [source, by]);
@@ -94,6 +109,10 @@ export async function startExport(id: number, site: string): Promise<void> {
     const clips = footageConfigured() ? await findSampleClips(sample).catch(() => undefined) : undefined;
     const input = exportInput(row.source, site, voiceKey, clips);
     if (!input) return update(id, { status: "error", error: "Unknown video" });
+    const props = input.inputProps as { voiceSrc?: string; voiceSrcs?: string[] };
+    const srcs = props.voiceSrcs ?? (props.voiceSrc ? [props.voiceSrc] : []);
+    const seconds = await measureVoices(srcs);
+    const inputProps = props.voiceSrcs ? { ...input.inputProps, voiceSeconds: seconds } : { ...input.inputProps, voiceSeconds: seconds[0] };
 
     const { addBundleToSandbox, createSandbox, renderMediaOnVercel } = await import("@remotion/vercel");
     const sandbox = await createSandbox({
@@ -106,7 +125,7 @@ export async function startExport(id: number, site: string): Promise<void> {
     const { sandboxId, cmdId } = await renderMediaOnVercel({
       sandbox,
       compositionId: input.compositionId,
-      inputProps: input.inputProps,
+      inputProps,
       codec: "h264",
       outputFile: SANDBOX_FILE,
       detached: true,

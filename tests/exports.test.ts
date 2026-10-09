@@ -2,7 +2,8 @@ import "./helpers";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { query } from "../lib/db";
-import { createExport, EXPORT_SOURCES, exportInput, exportPath, getExport, listExports, refreshExport, renderedNotUploaded, renderConfigured, startExport } from "../lib/video/exports";
+import { createExport, EXPORT_SOURCES, exportInput, exportPath, getExport, listExports, measureVoices, refreshExport, renderedNotUploaded, renderConfigured, startExport } from "../lib/video/exports";
+import { mp3Seconds } from "../lib/video/mp3";
 import { publicSiteUrl } from "../lib/site-url";
 import { samples } from "../lib/video/samples";
 import { walkScenes } from "../lib/video/walkthrough";
@@ -91,4 +92,32 @@ test("exports: the render fetches voices from a public address, never the login-
   } finally {
     process.env = env;
   }
+});
+
+// n silent MPEG-1 Layer III frames at 128 kbps / 44.1 kHz (417 bytes each, 1152 samples), after an ID3 tag.
+function fakeMp3(n: number) {
+  const id3 = Uint8Array.from([0x49, 0x44, 0x33, 4, 0, 0, 0, 0, 0, 5, 1, 2, 3, 4, 5]);
+  const frame = new Uint8Array(417);
+  frame.set([0xff, 0xfb, 0x90, 0x00]);
+  const out = new Uint8Array(id3.length + n * frame.length);
+  out.set(id3);
+  for (let i = 0; i < n; i++) out.set(frame, id3.length + i * frame.length);
+  return out;
+}
+
+test("exports: voice length is read from the MP3 itself, not left to Chrome (which can say Infinity)", async () => {
+  assert.equal(mp3Seconds(fakeMp3(100)), Math.round((100 * 1152 / 44100) * 1000) / 1000);
+  assert.equal(mp3Seconds(new TextEncoder().encode("<html>login</html>")), undefined);
+
+  const files: Record<string, Uint8Array<ArrayBuffer>> = { "https://s/a": fakeMp3(100), "https://s/b": fakeMp3(50) };
+  const get = (async (url: string) => (files[url] ? new Response(files[url]) : new Response("no", { status: 401 }))) as typeof fetch;
+  assert.deepEqual(await measureVoices(["https://s/a", "https://s/b"], get), [2.612, 1.306]);
+  await assert.rejects(measureVoices(["https://s/x"], get), /answered 401/);
+
+  const never = async () => { throw new Error("measured in render"); };
+  const short = await shortExportMetadata({ sample: "ca", voiceSrc: "/v.mp3", voiceSeconds: 10 }, never);
+  assert.equal(short.props.plan.voiceover?.src, "/v.mp3");
+  const walk = await walkExportMetadata({ voiceSrcs: walkScenes.map((_, i) => `/w${i}.mp3`), voiceSeconds: walkScenes.map(() => 3) }, never);
+  assert.ok(walk.props.walk.durations.every((d) => d === 3.8));
+  await assert.rejects(shortExportMetadata({ sample: "ca", voiceSrc: "/v.mp3" }, async () => Infinity), /Couldn't read the length/);
 });
