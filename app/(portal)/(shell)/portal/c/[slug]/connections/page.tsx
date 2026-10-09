@@ -19,8 +19,8 @@ export default async function Connections({ params, searchParams }: { params: Pr
     [client.id],
   );
   const providers = [
-    { id: "youtube", name: "YouTube", ready: youtubeConfigured(), text: "Views, likes, comments, subscribers and search traffic for your channel." },
-    { id: "instagram", name: "Instagram", ready: metaConfigured(), text: "Reels views, likes, comments, shares, saves and followers. Needs a professional account linked to a Facebook Page." },
+    { id: "youtube", name: "YouTube", ready: youtubeConfigured(), text: "Views, likes, comments, subscribers and search traffic for your channel, and permission to upload the videos you approve." },
+    { id: "instagram", name: "Instagram", ready: metaConfigured(), text: "Reels views, likes, comments, shares, saves and followers, and permission to post the Reels you approve. Needs a professional account linked to a Facebook Page." },
   ];
   return (
     <section className="wrap section-tight stack" style={{ gap: 20, maxWidth: 900 }}>
@@ -31,7 +31,11 @@ export default async function Connections({ params, searchParams }: { params: Pr
         </div>
         <Link href={`/portal/c/${slug}`} className="btn btn-ghost btn-sm">Back to dashboard</Link>
       </div>
-      <p className="muted">We only ask for read-only access to statistics. We can&apos;t post, delete or message from these connections, and you can disconnect at any time.</p>
+      <p className="muted">
+        We read your statistics and post only the videos you have approved (or that approved themselves after 48 hours), on
+        their publish date. We never delete anything or send messages, and you can disconnect at any time. Connected before
+        posting was added? Press Reconnect and allow posting.
+      </p>
       {sp.connected && <p className="notice" role="status">Connected {sp.connected}. Your numbers are loading.</p>}
       {sp.synced && <p className="notice" role="status">Sync finished.</p>}
       {sp.error && <p className="notice" role="alert">{sp.error}</p>}

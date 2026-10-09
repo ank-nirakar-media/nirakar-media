@@ -1,10 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireAdmin, requireClientAccess } from "@/lib/auth";
 import { one, query } from "@/lib/db";
 import { notifyClientMessage, notifyTeamOfClient } from "@/lib/notify";
+import { publishContent, publishDue } from "@/lib/publish";
 import { addEvent, approve, formats, getItem, isStage, platforms, requestChanges, sendForReview, stageOf, type Review } from "@/lib/pipeline";
 
 const str = (f: FormData, k: string, max = 500) => String(f.get(k) ?? "").trim().slice(0, max);
@@ -88,6 +90,16 @@ export async function addItemMessage(form: FormData) {
   redirect(`/admin/content/${item.id}#history`);
 }
 
+// Posts an approved video now (or tries again after a failure) instead of waiting for its publish date.
+export async function postItemNow(form: FormData) {
+  const user = await requireAdmin();
+  const item = await getItem(Number(form.get("id")));
+  if (!item) redirect("/admin/content");
+  if (!item.video_approved_at) redirect(`/admin/content/${item.id}?error=${encodeURIComponent("The client hasn't approved the video yet.")}`);
+  after(() => publishContent(item.id, user.email));
+  redirect(`/admin/content/${item.id}?posting=1#publishing`);
+}
+
 export async function deleteItem(form: FormData) {
   await requireAdmin();
   const item = await getItem(Number(form.get("id")));
@@ -109,6 +121,8 @@ export async function approveItem(form: FormData) {
   const { user, item, base } = await clientItem(form);
   const kind = await approve(item.id, user.email);
   if (kind) await notifyTeamOfClient(item, "approved", user.email, "", kind);
+  // An approved video is posted to the client's connected accounts if its publish date has come.
+  if (kind === "video") after(() => publishDue(undefined, item.id));
   const ok = Boolean(kind);
   revalidatePath(`/portal/c/${item.client_slug}`);
   redirect(`${base}?${ok ? "approved=1" : "error=already"}`);

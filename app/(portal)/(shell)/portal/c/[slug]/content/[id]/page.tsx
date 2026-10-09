@@ -5,6 +5,9 @@ import { autoApproveAt, formatDate, formatLabel, formatTime, getItem, listEvents
 import { redirect } from "next/navigation";
 import { approveItem, commentOnItem, requestItemChanges } from "../../../../../../pipeline-actions";
 
+// Approving a video can post it to the client's accounts straight after the response.
+export const maxDuration = 300;
+
 export const metadata: Metadata = { title: "Content item", robots: { index: false } };
 
 export default async function ClientItem({ params, searchParams }: { params: Promise<{ slug: string; id: string }>; searchParams: Promise<{ approved?: string; changes?: string; error?: string }> }) {

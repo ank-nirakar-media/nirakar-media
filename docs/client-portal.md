@@ -62,11 +62,13 @@ DATABASE_URL="postgres://..." ADMIN_EMAIL=you@nirakarmedia.com ADMIN_PASSWORD="a
 2. APIs & Services > Library > enable **YouTube Data API v3** and **YouTube Analytics API**.
 3. OAuth consent screen: External, app name, support email, logo, homepage
    `https://nirakarmedia.com`, privacy policy `https://nirakarmedia.com/legal/privacy`.
-   Add the scopes `youtube.readonly` and `yt-analytics.readonly`.
+   Add the scopes `youtube.readonly`, `yt-analytics.readonly` and `youtube.upload` (posting approved videos).
 4. Credentials > Create OAuth client ID > Web application. Authorised redirect URI:
    `https://www.nirakarmedia.com/api/connect/youtube/callback`
 5. Put the client ID and secret in `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 6. While the app is in "Testing", add each client's Google account as a test user (up to 100).
+   Google's docs say refresh tokens of a "Testing" app expire after 7 days, so connections break weekly
+   until the app is set to "In production".
    To remove that limit and the "unverified app" warning, submit for verification. The YouTube
    scopes are sensitive, so Google asks for a demo video of the connect flow; allow a few weeks.
    You must also verify the nirakarmedia.com domain in Google Search Console.
@@ -76,8 +78,8 @@ DATABASE_URL="postgres://..." ADMIN_EMAIL=you@nirakarmedia.com ADMIN_PASSWORD="a
 1. developers.facebook.com > My Apps > Create app > type **Business**.
 2. Add **Facebook Login for Business**. Valid OAuth redirect URI:
    `https://www.nirakarmedia.com/api/connect/instagram/callback`
-3. Permissions used: `instagram_basic`, `instagram_manage_insights`, `pages_show_list`,
-   `pages_read_engagement`, `business_management`.
+3. Permissions used: `instagram_basic`, `instagram_manage_insights`, `instagram_content_publish`
+   (posting approved Reels), `pages_show_list`, `pages_read_engagement`, `business_management`.
 4. App settings > Basic: privacy policy URL, a data deletion instructions URL (the privacy page
    covers this), app icon, category.
 5. Put the app ID and secret in `META_APP_ID` and `META_APP_SECRET`.
@@ -85,6 +87,18 @@ DATABASE_URL="postgres://..." ADMIN_EMAIL=you@nirakarmedia.com ADMIN_PASSWORD="a
    GST or Udyam certificate), then submit the permissions for **App Review** with a screencast.
    Until approved, only people with a role on the app (add them under App roles) can connect.
 7. Clients need an Instagram professional (Business or Creator) account linked to a Facebook Page.
+
+### Posting videos (lib/publish.ts)
+
+- Nirakar Media's own accounts are connected under the workspace `nirakar-media` (created on first visit
+  to Admin > Exports). Admin > Exports > Publish posts a finished MP4 there.
+- A client video is posted to the client's connected accounts after they approve it (or it auto-approves),
+  on its publish date at the 7 pm IST cron, or straight away if it has no date. Its Platform field decides
+  where ("Not decided" means both). The video link must be a direct MP4 or a Google Drive file shared with
+  "Anyone with the link".
+- Only connections that granted posting rights (`connections.can_publish`) are used. Accounts connected
+  earlier must reconnect. Each attempt is a row in `publications`; Admin > content item shows them, with
+  "Post now" / "Try posting again".
 
 ### 5. Email through Resend (20 minutes, then DNS time)
 

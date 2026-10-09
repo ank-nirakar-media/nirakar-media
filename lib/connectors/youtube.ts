@@ -3,13 +3,17 @@ import { decrypt, encrypt } from "../crypto";
 import { fetchJson, languageName, saveChannelDay, saveVideo, today } from "./common";
 
 // Google OAuth + YouTube Data API v3 + YouTube Analytics API v2.
+// youtube.upload posts approved videos; the other two read statistics.
 const SCOPES = [
   "https://www.googleapis.com/auth/youtube.readonly",
   "https://www.googleapis.com/auth/yt-analytics.readonly",
+  "https://www.googleapis.com/auth/youtube.upload",
 ];
+const UPLOAD_SCOPE = "https://www.googleapis.com/auth/youtube.upload";
 const API = process.env.YOUTUBE_API_BASE || "https://www.googleapis.com/youtube/v3";
 const ANALYTICS = process.env.YOUTUBE_ANALYTICS_BASE || "https://youtubeanalytics.googleapis.com/v2";
 const TOKEN_URL = process.env.GOOGLE_TOKEN_URL || "https://oauth2.googleapis.com/token";
+const UPLOAD = process.env.YOUTUBE_UPLOAD_BASE || "https://www.googleapis.com/upload/youtube/v3";
 
 export const youtubeConfigured = () => Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 
@@ -27,7 +31,7 @@ export function youtubeAuthUrl(redirectUri: string, state: string) {
   return `https://accounts.google.com/o/oauth2/v2/auth?${p}`;
 }
 
-type Token = { access_token: string; refresh_token?: string; expires_in: number };
+type Token = { access_token: string; refresh_token?: string; expires_in: number; scope?: string };
 
 async function tokenRequest(params: Record<string, string>) {
   return fetchJson<Token>(TOKEN_URL, {
@@ -46,17 +50,19 @@ export async function connectYoutube(clientId: number, code: string, redirectUri
   if (!items.length) throw new Error("This Google account has no YouTube channel.");
   const ch = items[0];
   await query(
-    `INSERT INTO connections (client_id, platform, account_id, account_name, access_token, refresh_token, token_expires_at, status, last_error)
-     VALUES ($1, 'youtube', $2, $3, $4, $5, $6, 'active', NULL)
+    `INSERT INTO connections (client_id, platform, account_id, account_name, access_token, refresh_token, token_expires_at, status, last_error, can_publish)
+     VALUES ($1, 'youtube', $2, $3, $4, $5, $6, 'active', NULL, $7)
      ON CONFLICT (client_id, platform, account_id) DO UPDATE SET account_name = EXCLUDED.account_name,
        access_token = EXCLUDED.access_token, refresh_token = COALESCE(EXCLUDED.refresh_token, connections.refresh_token),
-       token_expires_at = EXCLUDED.token_expires_at, status = 'active', last_error = NULL`,
-    [clientId, ch.id, ch.snippet.title, encrypt(tok.access_token), tok.refresh_token ? encrypt(tok.refresh_token) : null, new Date(Date.now() + tok.expires_in * 1000)],
+       token_expires_at = EXCLUDED.token_expires_at, status = 'active', last_error = NULL, can_publish = EXCLUDED.can_publish`,
+    [clientId, ch.id, ch.snippet.title, encrypt(tok.access_token), tok.refresh_token ? encrypt(tok.refresh_token) : null, new Date(Date.now() + tok.expires_in * 1000),
+      (tok.scope ?? "").split(" ").includes(UPLOAD_SCOPE)],
   );
   return ch.snippet.title;
 }
 
-type Conn = { id: number; client_id: number; account_id: string; access_token: string; refresh_token: string | null; token_expires_at: string | null };
+export type YoutubeConn = { id: number; client_id: number; account_id: string; access_token: string; refresh_token: string | null; token_expires_at: string | null };
+type Conn = YoutubeConn;
 
 async function accessToken(conn: Conn) {
   if (conn.token_expires_at && new Date(conn.token_expires_at).getTime() > Date.now() + 60_000) return decrypt(conn.access_token);
@@ -136,4 +142,40 @@ export async function syncYoutube(conn: Conn) {
     await saveChannelDay(conn.client_id, "youtube", d, { searchViews: Number(views) });
   }
   return ids.length;
+}
+
+// YouTube rejects titles over 100 characters or containing < or >.
+export const youtubeTitle = (t: string) => t.replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 100) || "Untitled";
+
+// Uploads one MP4 with YouTube's resumable upload (start a session, then send the bytes). Vertical videos
+// up to 3 minutes become Shorts on their own. Each upload uses 1 of the 100 daily uploads.
+export async function uploadYoutube(
+  conn: Conn,
+  file: Uint8Array<ArrayBuffer>,
+  meta: { title: string; description: string; privacy?: "public" | "unlisted" | "private"; short: boolean },
+): Promise<{ id: string; url: string }> {
+  const token = await accessToken(conn);
+  const start = await fetch(`${UPLOAD}/videos?uploadType=resumable&part=snippet,status`, {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json; charset=UTF-8",
+      "X-Upload-Content-Type": "video/mp4",
+      "X-Upload-Content-Length": String(file.length),
+    },
+    body: JSON.stringify({
+      snippet: { title: youtubeTitle(meta.title), description: meta.description.replace(/[<>]/g, "").slice(0, 5000), categoryId: "22" },
+      status: { privacyStatus: meta.privacy ?? "public", selfDeclaredMadeForKids: false },
+    }),
+  });
+  if (!start.ok) {
+    const body = await start.text();
+    if (start.status === 403 && /insufficient/i.test(body)) throw new Error("This YouTube connection can't upload. Reconnect YouTube and allow uploads.");
+    throw new Error(`${start.status} from YouTube: ${body.slice(0, 300)}`);
+  }
+  const session = start.headers.get("location");
+  if (!session) throw new Error("YouTube didn't return an upload address.");
+  const video = await fetchJson<{ id: string }>(session, { method: "PUT", headers: { "Content-Type": "video/mp4" }, body: file });
+  return { id: video.id, url: meta.short ? `https://www.youtube.com/shorts/${video.id}` : `https://www.youtube.com/watch?v=${video.id}` };
 }
