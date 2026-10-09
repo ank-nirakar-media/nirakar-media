@@ -4,7 +4,12 @@ import { bundle } from "@remotion/bundler";
 import path from "node:path";
 
 async function main() {
-  const out = await bundle({ entryPoint: path.resolve("remotion/index.ts"), outDir: path.resolve(".remotion") });
+  const out = await bundle({
+    entryPoint: path.resolve("remotion/index.ts"),
+    outDir: path.resolve(".remotion"),
+    // No source maps: the whole folder is copied into each render sandbox, and they'd triple its size.
+    webpackOverride: (config) => ({ ...config, devtool: false }),
+  });
   console.log("Remotion bundle written to", out);
 }
 

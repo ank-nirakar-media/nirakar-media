@@ -40,6 +40,8 @@ const START_LIMIT_MS = 15 * 60 * 1000;
 export const renderConfigured = () => Boolean(process.env.BLOB_STORE_ID || process.env.BLOB_READ_WRITE_TOKEN);
 // The sandbox renders to this file; this function then copies it to Blob.
 const SANDBOX_FILE = "/tmp/video.mp4";
+// Where @remotion/vercel puts the bundle inside the sandbox (relative to /vercel/sandbox).
+const SANDBOX_BUNDLE_DIR = "remotion-bundle";
 // The sandbox has no Blob credentials (OIDC only works inside our functions), so its own upload step is
 // handed an empty token. It fails with exactly this message after the video is rendered, and we upload it.
 const NO_TOKEN = "BLOB_READ_WRITE_TOKEN is not set.";
@@ -97,6 +99,9 @@ export async function startExport(id: number, site: string): Promise<void> {
     const sandbox = await createSandbox({
       onProgress: async ({ progress }) => update(id, { progress: Math.round(progress * 20) / 100 }),
     });
+    // @remotion/vercel 4.0.534 creates the bundle's subfolders (public/fonts) but not the bundle folder
+    // itself, so the first mkDir fails on a fresh sandbox. Create it first.
+    await sandbox.mkDir(SANDBOX_BUNDLE_DIR).catch(() => undefined);
     await addBundleToSandbox({ sandbox, bundleDir: path.join(process.cwd(), BUNDLE_DIR) });
     const { sandboxId, cmdId } = await renderMediaOnVercel({
       sandbox,
