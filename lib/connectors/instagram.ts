@@ -7,7 +7,8 @@ import { fetchJson, saveChannelDay, saveVideo, today } from "./common";
 // outside your own team.
 const VERSION = process.env.META_GRAPH_VERSION || "v23.0";
 const GRAPH = process.env.META_GRAPH_BASE || `https://graph.facebook.com/${VERSION}`;
-const SCOPES = ["instagram_basic", "instagram_manage_insights", "pages_show_list", "pages_read_engagement", "business_management"];
+// instagram_content_publish posts approved Reels; the rest read statistics.
+const SCOPES = ["instagram_basic", "instagram_manage_insights", "instagram_content_publish", "pages_show_list", "pages_read_engagement", "business_management"];
 
 export const metaConfigured = () => Boolean(process.env.META_APP_ID && process.env.META_APP_SECRET);
 
@@ -29,15 +30,18 @@ export async function connectInstagram(clientId: number, code: string, redirectU
     `${GRAPH}/me/accounts?fields=id,name,access_token,instagram_business_account{id,username}&access_token=${long.access_token}`,
   );
   const linked = data.filter((p) => p.instagram_business_account);
+  // People can untick permissions in Facebook's dialog, so record whether posting was allowed.
+  const perms = await fetchJson<{ data?: { permission: string; status: string }[] }>(`${GRAPH}/me/permissions?access_token=${long.access_token}`).catch(() => ({ data: [] }));
+  const canPublish = (perms.data ?? []).some((p) => p.permission === "instagram_content_publish" && p.status === "granted");
   if (!linked.length) throw new Error("No Instagram professional account is linked to a Facebook Page you manage.");
   for (const p of linked) {
     const ig = p.instagram_business_account!;
     await query(
-      `INSERT INTO connections (client_id, platform, account_id, account_name, access_token, status, last_error)
-       VALUES ($1, 'instagram', $2, $3, $4, 'active', NULL)
+      `INSERT INTO connections (client_id, platform, account_id, account_name, access_token, status, last_error, can_publish)
+       VALUES ($1, 'instagram', $2, $3, $4, 'active', NULL, $5)
        ON CONFLICT (client_id, platform, account_id) DO UPDATE SET account_name = EXCLUDED.account_name,
-         access_token = EXCLUDED.access_token, status = 'active', last_error = NULL`,
-      [clientId, ig.id, ig.username ? `@${ig.username}` : p.name, encrypt(p.access_token)],
+         access_token = EXCLUDED.access_token, status = 'active', last_error = NULL, can_publish = EXCLUDED.can_publish`,
+      [clientId, ig.id, ig.username ? `@${ig.username}` : p.name, encrypt(p.access_token), canPublish],
     );
   }
   return linked.map((p) => p.instagram_business_account!.username ?? p.name).join(", ");
@@ -87,4 +91,28 @@ export async function syncInstagram(conn: { client_id: number; account_id: strin
   }
   await saveChannelDay(conn.client_id, "instagram", day, { followers: acct.followers_count ?? 0 });
   return saved;
+}
+
+// Posts one Reel: Instagram downloads the video from a public link (a short-lived signed link is enough),
+// processes it, then we publish it. Processing usually takes under a minute; we wait up to `waitMs`.
+export async function publishReel(
+  conn: { account_id: string; access_token: string },
+  videoUrl: string,
+  caption: string,
+  opts: { waitMs?: number; pollMs?: number } = {},
+): Promise<{ id: string; url: string | null }> {
+  const token = decrypt(conn.access_token);
+  const form = (p: Record<string, string>) => ({ method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ ...p, access_token: token }) });
+  const container = await fetchJson<{ id: string }>(`${GRAPH}/${conn.account_id}/media`, form({ media_type: "REELS", video_url: videoUrl, caption: caption.slice(0, 2200), share_to_feed: "true" }));
+  const deadline = Date.now() + (opts.waitMs ?? 240_000);
+  for (;;) {
+    const s = await fetchJson<{ status_code?: string; status?: string }>(`${GRAPH}/${container.id}?fields=status_code,status&access_token=${token}`);
+    if (s.status_code === "FINISHED") break;
+    if (s.status_code === "ERROR" || s.status_code === "EXPIRED") throw new Error(`Instagram couldn't process the video: ${s.status ?? s.status_code}`);
+    if (Date.now() > deadline) throw new Error("Instagram is still processing the video. Try publishing again in a few minutes.");
+    await new Promise((r) => setTimeout(r, opts.pollMs ?? 5000));
+  }
+  const post = await fetchJson<{ id: string }>(`${GRAPH}/${conn.account_id}/media_publish`, form({ creation_id: container.id }));
+  const info = await fetchJson<{ permalink?: string }>(`${GRAPH}/${post.id}?fields=permalink&access_token=${token}`).catch(() => ({ permalink: undefined }));
+  return { id: post.id, url: info.permalink ?? null };
 }

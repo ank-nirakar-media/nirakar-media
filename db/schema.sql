@@ -288,3 +288,27 @@ CREATE TABLE IF NOT EXISTS video_exports (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Whether a connection was granted posting rights (youtube.upload or instagram_content_publish).
+ALTER TABLE connections ADD COLUMN IF NOT EXISTS can_publish BOOLEAN NOT NULL DEFAULT false;
+
+-- Videos posted to YouTube or Instagram: an MP4 export to Nirakar's own accounts (Admin > Exports), or an
+-- approved client video to the client's accounts. One row per platform.
+CREATE TABLE IF NOT EXISTS publications (
+  id             SERIAL PRIMARY KEY,
+  client_id      INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  platform       TEXT NOT NULL CHECK (platform IN ('youtube', 'instagram')),
+  source         TEXT NOT NULL CHECK (source IN ('export', 'content')),
+  source_id      INTEGER NOT NULL,
+  connection_id  INTEGER REFERENCES connections(id) ON DELETE SET NULL,
+  title          TEXT NOT NULL DEFAULT '',
+  caption        TEXT NOT NULL DEFAULT '',
+  status         TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'publishing', 'done', 'error')),
+  external_id    TEXT,
+  url            TEXT,
+  error          TEXT,
+  created_by     TEXT NOT NULL DEFAULT '',
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS publications_source ON publications (source, source_id);

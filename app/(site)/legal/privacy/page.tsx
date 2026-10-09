@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Privacy policy" };
 
 export default function PrivacyPage() {
   return (
-    <Legal title="Privacy policy" updated="29 September 2026">
+    <Legal title="Privacy policy" updated="9 October 2026">
       <p>This policy explains what personal data Nirakar Media collects and how we use it, in line with India&apos;s Digital Personal Data Protection Act, 2023.</p>
       <h2>What we collect</h2>
       <ul>
@@ -16,10 +16,12 @@ export default function PrivacyPage() {
       </ul>
       <h2>Connected accounts and your dashboard</h2>
       <p>
-        When you connect YouTube or Instagram to your Nirakar Media dashboard, you give us read-only access to your
-        channel and account statistics: video titles, publish dates, views, likes, comments, shares, saves, followers and
-        search traffic. We use this data only to show your results in your dashboard and reports and to plan your
-        content. We cannot post, delete or send messages through these connections.
+        When you connect YouTube or Instagram to your Nirakar Media dashboard, you give us access to your channel and
+        account statistics: video titles, publish dates, views, likes, comments, shares, saves, followers and search
+        traffic. We use this data only to show your results in your dashboard and reports and to plan your content. If you
+        allow posting, we also upload to YouTube and post to Instagram the videos you have approved in your dashboard (or
+        that were approved automatically 48 hours after we asked), with the title and caption shown there. We never
+        delete your content or send messages through these connections.
       </p>
       <p>
         Access tokens are stored encrypted. We do not sell this data, use it for advertising or share it with anyone

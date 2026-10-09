@@ -1,10 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { Publication } from "@/lib/publish";
 import type { VideoExport } from "@/lib/video/exports";
+import { PublishBox } from "./PublishBox";
 
 // Admin > Exports: start an MP4 render and watch it until the download link is ready.
-export function ExportPanel({ sources, initial, disabled }: { sources: { id: string; label: string }[]; initial: VideoExport[]; disabled: boolean }) {
+export function ExportPanel({ sources, initial, disabled, accounts, posts }: {
+  sources: { id: string; label: string }[];
+  initial: VideoExport[];
+  disabled: boolean;
+  accounts: { youtube?: string; instagram?: string };
+  posts: Publication[];
+}) {
   const [rows, setRows] = useState(initial);
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState<string>();
@@ -61,7 +69,10 @@ export function ExportPanel({ sources, initial, disabled }: { sources: { id: str
                 <td>{new Date(r.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</td>
                 <td aria-live="polite">
                   {r.status === "done" && r.url ? (
-                    <a className="btn btn-sm" href={`/api/admin/exports/${r.id}/download`} target="_blank" rel="noreferrer">Download MP4{r.size_bytes ? ` (${(r.size_bytes / 1e6).toFixed(1)} MB)` : ""}</a>
+                    <>
+                      <a className="btn btn-sm" href={`/api/admin/exports/${r.id}/download`} target="_blank" rel="noreferrer">Download MP4{r.size_bytes ? ` (${(r.size_bytes / 1e6).toFixed(1)} MB)` : ""}</a>
+                      <PublishBox exportId={r.id} defaultTitle={`Nirakar Media: ${label(r.source).replace(/ \(.*\)$/, "")}`} accounts={accounts} initial={posts.filter((p) => p.source_id === r.id)} />
+                    </>
                   ) : r.status === "error" ? (
                     <span className="muted">Failed: {r.error}</span>
                   ) : (

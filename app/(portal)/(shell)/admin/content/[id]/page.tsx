@@ -10,13 +10,15 @@ import { VideoPreview } from "@/components/VideoPreview";
 import { loadBrand } from "@/lib/brand";
 import { brandColors, planFromScenes } from "@/lib/video/build";
 import { aiDraftScript } from "../../../../ai-actions";
-import { addItemMessage, deleteItem, sendItemForReview, updateItem } from "../../../../pipeline-actions";
+import { listPublications, platformsFor, publishConnections } from "@/lib/publish";
+import { addItemMessage, deleteItem, postItemNow, sendItemForReview, updateItem } from "../../../../pipeline-actions";
 
-export const maxDuration = 120;
+// Long enough for AI drafts and for posting a video after "Post now".
+export const maxDuration = 300;
 
 export const metadata: Metadata = { title: "Content item", robots: { index: false } };
 
-export default async function AdminItem({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; sent?: string; error?: string; drafted?: string }> }) {
+export default async function AdminItem({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; sent?: string; error?: string; drafted?: string; posting?: string }> }) {
   await requireAdmin();
   const { id } = await params;
   const sp = await searchParams;
@@ -27,6 +29,9 @@ export default async function AdminItem({ params, searchParams }: { params: Prom
   const scenes = await loadScenes(item.id);
   const ai = aiConfigured();
   const preview = scenes.length && item.format !== "long" ? await previewPlan(item, scenes) : null;
+  const posts = await listPublications("content", [item.id]);
+  const postTo = await publishConnections(item.client_id);
+  const targets = platformsFor(item.platform);
 
   return (
     <section className="wrap section-tight stack" style={{ gap: 22, maxWidth: 900 }}>
@@ -43,6 +48,7 @@ export default async function AdminItem({ params, searchParams }: { params: Prom
       {sp.sent && <p className="notice notice-inline" role="status">{reviewLabel(sp.sent)} sent to the client for approval. It approves itself automatically if they don&apos;t reply in 48 hours.</p>}
       {sp.drafted && <p className="notice notice-inline" role="status">AI draft saved. Read it, edit anything that&apos;s off, and fill any [placeholders] before you send it to the client.</p>}
       {sp.error && <p className="notice notice-inline" role="alert">{sp.error}</p>}
+      {sp.posting && <p className="notice notice-inline" role="status">Posting now. Refresh in a minute or two to see the result below.</p>}
       {item.review && due && (
         <p className="notice notice-inline" role="status">Waiting for the client to approve the {item.review}. Auto-approves on {formatTime(due.toISOString())}.</p>
       )}
@@ -66,6 +72,27 @@ export default async function AdminItem({ params, searchParams }: { params: Prom
             <button className="btn btn-ghost btn-sm" type="submit" disabled={item.review === "video"}>{item.video_approved_at ? "Send again" : "Send video for approval"}</button>
           </form>
         </div>
+      </div>
+
+      <div className="card stack" id="publishing" style={{ gap: 8 }}>
+        <h3>Posting</h3>
+        <p className="fine">
+          {targets.length
+            ? `Once the client approves the video, it is posted to their ${targets.map((t) => (t === "youtube" ? "YouTube" : "Instagram")).join(" and ")} on the publish date (7 pm India time), or straight away if there is no date.`
+            : "This platform isn't posted automatically. Post it by hand and paste the link."}
+          {" "}Posting accounts: {(["youtube", "instagram"] as const).filter((t) => targets.includes(t)).map((t) => `${t === "youtube" ? "YouTube" : "Instagram"} ${postTo[t] ? postTo[t]!.account_name : "not connected with posting permission"}`).join(", ") || "none"}.
+        </p>
+        {posts.map((p) => (
+          <p key={p.id} className="fine">
+            <b>{p.platform === "youtube" ? "YouTube" : "Instagram"}</b> · {formatTime(p.created_at)} ·{" "}
+            {p.status === "done" ? (p.url ? <a href={p.url} target="_blank" rel="noreferrer">Posted</a> : "Posted") : p.status === "error" ? `Failed: ${p.error}` : "Posting…"}
+          </p>
+        ))}
+        {item.video_approved_at && targets.length > 0 && (
+          <form action={postItemNow}><input type="hidden" name="id" value={item.id} />
+            <button className="btn btn-ghost btn-sm" type="submit">{posts.some((p) => p.status === "error") ? "Try posting again" : "Post now"}</button>
+          </form>
+        )}
       </div>
 
       <div className="card form studio-box">
